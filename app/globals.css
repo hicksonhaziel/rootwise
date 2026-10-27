@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Rootwise Global Styles
+   Brand: Lime #A8F25C on Dark #0A0A0A
+   ============================================================ */
+
+@layer base {
+  :root {
+    --color-lime: #A8F25C;
+    --color-bg-base: #0A0A0A;
+    --color-bg-surface: #111111;
+    --color-bg-elevated: #1A1A1A;
+    --color-bg-border: #2A2A2A;
+    --color-text-primary: #FAFAFA;
+    --color-text-secondary: #A0A0A0;
+    --color-text-tertiary: #666666;
+  }
+
+  * {
+    border-color: theme('colors.bg.border');
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-feature-settings: "ss01" on, "cv01" on, "cv11" on;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-base);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #333333;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #444444;
+  }
+
+  /* Text selection */
+  ::selection {
+    background-color: rgba(168, 242, 92, 0.2);
+    color: var(--color-text-primary);
+  }
+}
+
+@layer components {
+  /* Card base — matte obsidian, razor-sharp 1px border */
+  .card {
+    @apply bg-bg-surface border border-bg-border rounded-lg shadow-card;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .card:hover {
+    @apply border-[#333333];
+  }
+
+  /* Status badge */
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
+  }
+  .status-dot-not-assessed { @apply bg-status-not-assessed; }
+  .status-dot-needs-work   { @apply bg-status-needs-work; }
+  .status-dot-developing   { @apply bg-status-developing; }
+  .status-dot-demonstrated { @apply bg-status-demonstrated; }
+}

@@ -1,0 +1,52 @@
+# === Dependencies ===
+node_modules/
+.pnp
+.pnp.js
+
+# === Next.js ===
+.next/
+out/
+build/
+dist/
+
+# === Environment / secrets — NEVER commit ===
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === Project intelligence — NEVER commit ===
+context.txt
+AGENTS.md
+BUILD.md
+Rootwise_Project_Blueprint_v1.1.md
+OPEN--BUILD-2026-Challenge-Brief.pdf
+
+# === Supabase local dev ===
+supabase/.branches
+supabase/.temp
+
+# === OS artifacts ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+
+# === Testing ===
+coverage/
+.vitest/
+
+# === Logs ===
+*.log
+npm-debug.log*
+
+# === TypeScript build info ===
+*.tsbuildinfo
+next-env.d.ts
+
+# === Misc ===
+.vercel
+.turbo
