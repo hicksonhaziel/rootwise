@@ -11,15 +11,28 @@
    ============================================================ */
 
 @layer base {
-  :root {
+  :root, .dark {
     --color-lime: #A8F25C;
     --color-bg-base: #0A0A0A;
     --color-bg-surface: #111111;
-    --color-bg-elevated: #1A1A1A;
-    --color-bg-border: #2A2A2A;
+    --color-bg-elevated: #181818;
+    --color-bg-border: #262626;
     --color-text-primary: #FAFAFA;
     --color-text-secondary: #A0A0A0;
     --color-text-tertiary: #666666;
+    --color-text-inverse: #0A0A0A;
+  }
+
+  .light {
+    --color-lime: #5DA712;
+    --color-bg-base: #F8F9FA;
+    --color-bg-surface: #FFFFFF;
+    --color-bg-elevated: #F1F3F5;
+    --color-bg-border: #E5E7EB;
+    --color-text-primary: #111827;
+    --color-text-secondary: #4B5563;
+    --color-text-tertiary: #9CA3AF;
+    --color-text-inverse: #FFFFFF;
   }
 
   * {

@@ -6,6 +6,7 @@ import { RootwiseLogo } from "@/components/ui/rootwise-logo";
 import { CreateCourseModal } from "@/components/course/create-course-modal";
 import { CourseCard } from "@/components/course/course-card";
 import { TopicRevisitList } from "@/components/course/topic-revisit-list";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Plus, SignOut } from "@phosphor-icons/react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -81,6 +82,7 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
           <RootwiseLogo variant="wordmark" size={28} />
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <span className="text-xs text-text-secondary bg-bg-surface border border-bg-border px-2.5 py-1 rounded-md font-mono hidden sm:inline-block">
               {user.email}
             </span>

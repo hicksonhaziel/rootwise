@@ -24,21 +24,28 @@ export const metadata: Metadata = {
   },
 };
 
+import { ThemeProvider } from "@/components/theme/theme-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('rootwise-theme');var d=true;if(s==='light')d=false;else if(s==='dark')d=true;else d=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.add(d?'dark':'light');}catch(e){}})()`,
+          }}
+        />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-bg-base text-text-primary antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-bg-base text-text-primary antialiased min-h-screen transition-colors duration-200`}
       >
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

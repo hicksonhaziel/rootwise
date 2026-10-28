@@ -23,21 +23,21 @@ module.exports = {
           800: "#264B0A",
           900: "#132505",
         },
-        // Background scale
+        // Background scale (dynamic via theme variables)
         bg: {
-          base: "#0A0A0A",    // Page background
-          surface: "#111111", // Cards, panels
-          elevated: "#1A1A1A",// Dropdowns, modals
-          overlay: "#222222", // Overlapping elements
-          border: "#2A2A2A",  // Default borders
-          "border-subtle": "#1E1E1E",
+          base: "var(--color-bg-base)",
+          surface: "var(--color-bg-surface)",
+          elevated: "var(--color-bg-elevated)",
+          overlay: "var(--color-bg-elevated)",
+          border: "var(--color-bg-border)",
+          "border-subtle": "var(--color-bg-border)",
         },
-        // Text scale
+        // Text scale (dynamic via theme variables)
         text: {
-          primary: "#FAFAFA",
-          secondary: "#A0A0A0",
-          tertiary: "#666666",
-          inverse: "#0A0A0A",
+          primary: "var(--color-text-primary)",
+          secondary: "var(--color-text-secondary)",
+          tertiary: "var(--color-text-tertiary)",
+          inverse: "var(--color-text-inverse)",
         },
         // Status colors
         status: {

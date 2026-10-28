@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ArrowRight, LockKey, EnvelopeSimple, Sparkle, SpinnerGap } from "@phosphor-icons/react";
 
 export default function LoginPage() {
@@ -92,6 +93,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center px-4 relative overflow-hidden font-sans">
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
       {/* Fluid ambient background elements */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { MaterialsTab } from "@/components/sources/materials-tab";
 import { TopicsTab } from "@/components/course/topics-tab";
 import {
@@ -63,6 +64,10 @@ export function CourseWorkspace({ course }: { course: Course }) {
                 {course.title}
               </span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
           </div>
         </div>
       </nav>
