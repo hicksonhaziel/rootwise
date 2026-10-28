@@ -27,60 +27,25 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      if (mode === "signup") {
-        // Register through auto-confirm endpoint to bypass "Email not confirmed"
-        const regRes = await fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, password, action: "signup" }),
-        });
+      // Auto-create / auto-confirm on backend with zero email verification
+      const authRes = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, password, action: "seamless" }),
+      });
 
-        const regData = await regRes.json();
-        if (!regRes.ok) {
-          throw new Error(regData.error || "Failed to create account");
-        }
-
-        // Now sign in immediately
-        const { error: loginErr } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-
-        if (loginErr) throw loginErr;
-      } else {
-        // Sign in
-        const { error: loginErr } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-
-        if (loginErr) {
-          // If unconfirmed from earlier signup, auto-confirm and retry!
-          if (loginErr.message.toLowerCase().includes("email not confirmed")) {
-            setInfoMessage("Auto-confirming your account…");
-            const confirmRes = await fetch("/api/auth", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email: cleanEmail,
-                action: "confirm_existing",
-              }),
-            });
-
-            if (confirmRes.ok) {
-              const { error: retryErr } = await supabase.auth.signInWithPassword({
-                email: cleanEmail,
-                password,
-              });
-              if (retryErr) throw retryErr;
-            } else {
-              throw loginErr;
-            }
-          } else {
-            throw loginErr;
-          }
-        }
+      const authData = await authRes.json();
+      if (!authRes.ok) {
+        throw new Error(authData.error || "Authentication error");
       }
+
+      // Sign into browser session
+      const { error: loginErr } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+      if (loginErr) throw loginErr;
 
       router.push("/dashboard");
       router.refresh();
