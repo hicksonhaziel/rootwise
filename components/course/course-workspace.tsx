@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
 import { MaterialsTab } from "@/components/sources/materials-tab";
@@ -70,7 +70,7 @@ export function CourseWorkspace({ course }: { course: Course }) {
       {/* Tab bar */}
       <div className="border-b border-bg-border bg-bg-surface/40">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex gap-1 -mb-px overflow-x-auto">
+          <div className="flex gap-2 -mb-px overflow-x-auto py-1">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = tab.id === activeTab;
@@ -79,16 +79,23 @@ export function CourseWorkspace({ course }: { course: Course }) {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap
+                    relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-md
                     ${
                       isActive
-                        ? "border-lime-300 text-lime-300"
-                        : "border-transparent text-text-tertiary hover:text-text-secondary"
+                        ? "text-lime-300 font-semibold"
+                        : "text-text-tertiary hover:text-text-secondary"
                     }
                   `}
                 >
-                  <Icon size={14} weight={isActive ? "fill" : "regular"} />
-                  {tab.label}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeWorkspaceTab"
+                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                      className="absolute inset-0 bg-lime-300/10 border border-lime-300/25 rounded-md"
+                    />
+                  )}
+                  <Icon size={14} weight={isActive ? "fill" : "regular"} className="relative z-10" />
+                  <span className="relative z-10">{tab.label}</span>
                 </button>
               );
             })}
@@ -98,18 +105,20 @@ export function CourseWorkspace({ course }: { course: Course }) {
 
       {/* Tab content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {activeTab === "overview" && (
-            <OverviewTab
-              course={course}
-              onNavigate={(tab) => setActiveTab(tab)}
-            />
-          )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
+          >
+            {activeTab === "overview" && (
+              <OverviewTab
+                course={course}
+                onNavigate={(tab) => setActiveTab(tab)}
+              />
+            )}
           {activeTab === "materials" && (
             <MaterialsTab
               courseId={course.id}
@@ -131,7 +140,8 @@ export function CourseWorkspace({ course }: { course: Course }) {
           {activeTab === "room" && (
             <ComingSoon label="Judges' Study Room" phase="Phase 4" />
           )}
-        </motion.div>
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );

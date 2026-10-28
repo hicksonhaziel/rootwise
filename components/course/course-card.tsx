@@ -17,9 +17,10 @@ export function CourseCard({ course }: { course: Course }) {
   return (
     <motion.div
       onClick={() => router.push(`/courses/${course.id}`)}
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
-      className="card p-5 cursor-pointer flex flex-col justify-between h-[180px] group select-none"
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="card p-5 cursor-pointer flex flex-col justify-between h-[180px] group select-none hover:border-lime-300/30 transition-colors"
     >
       <div>
         {/* Top meta row */}
