@@ -69,7 +69,7 @@ export function computeCohortSummary(
   }
 
   const misconceptions: MisconceptionAggregate[] = [...catMap.entries()]
-    .map(([category, { count, confident_wrong_count: cw }]) => ({
+    .map(([category, { count, confident_wrong: cw }]) => ({
       category,
       count,
       confident_wrong_count: cw ?? 0,

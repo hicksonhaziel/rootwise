@@ -29,11 +29,50 @@ export default async function DashboardPage() {
     .order("updated_at", { ascending: false })
     .limit(5);
 
+interface RawWeakTopicQuery {
+  topic_id: string;
+  status: string;
+  status_reason: string | null;
+  topics:
+    | {
+        title: string;
+        course_id: string;
+        courses: { title: string } | { title: string }[] | null;
+      }
+    | {
+        title: string;
+        course_id: string;
+        courses: { title: string } | { title: string }[] | null;
+      }[]
+    | null;
+}
+
+  // Format weakTopics so joined objects match WeakTopic shape
+  const rawList = (weakTopics ?? []) as unknown as RawWeakTopicQuery[];
+  const formattedWeakTopics = rawList.map((item) => {
+    const topicObj = Array.isArray(item.topics) ? item.topics[0] : item.topics;
+    const coursesVal = topicObj?.courses;
+    const courseObj = Array.isArray(coursesVal) ? coursesVal[0] : coursesVal;
+
+    return {
+      topic_id: item.topic_id,
+      status: item.status,
+      status_reason: item.status_reason,
+      topics: topicObj
+        ? {
+            title: topicObj.title,
+            course_id: topicObj.course_id,
+            courses: courseObj ? { title: courseObj.title } : null,
+          }
+        : null,
+    };
+  });
+
   return (
     <DashboardClient
       user={{ id: user.id, email: user.email ?? "" }}
       courses={courses ?? []}
-      weakTopics={weakTopics ?? []}
+      weakTopics={formattedWeakTopics}
     />
   );
 }
