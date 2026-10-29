@@ -7,6 +7,7 @@
 /* ============================================================
    Rootwise Global Styles
    Brand: Lime #A8F25C on Dark #0A0A0A
+   Light: Slate #0F172A on Crisp Paper #F8FAFC
    Typography: Plus Jakarta Sans + JetBrains Mono
    ============================================================ */
 
@@ -24,15 +25,15 @@
   }
 
   .light {
-    --color-lime: #5DA712;
-    --color-bg-base: #F8F9FA;
+    --color-lime: #2D6A0E;
+    --color-bg-base: #F8FAFC;
     --color-bg-surface: #FFFFFF;
-    --color-bg-elevated: #F1F3F5;
-    --color-bg-border: #E5E7EB;
-    --color-text-primary: #111827;
-    --color-text-secondary: #4B5563;
-    --color-text-tertiary: #9CA3AF;
-    --color-text-inverse: #FFFFFF;
+    --color-bg-elevated: #F1F5F9;
+    --color-bg-border: #E2E8F0;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #475569;
+    --color-text-tertiary: #64748B;
+    --color-text-inverse: #0A0A0A;
   }
 
   * {
@@ -50,7 +51,7 @@
     font-feature-settings: "ss01" on, "cv01" on, "cv11" on;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -58,37 +59,64 @@
   ::-webkit-scrollbar-track {
     background: var(--color-bg-base);
   }
-  ::-webkit-scrollbar-thumb {
-    background: #333333;
+  .dark ::-webkit-scrollbar-thumb {
+    background: #2E2E2E;
     border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #444444;
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #3E3E3E;
+  }
+  .light ::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 3px;
+  }
+  .light ::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
   }
 
   /* Text selection */
   ::selection {
-    background-color: rgba(168, 242, 92, 0.2);
+    background-color: rgba(168, 242, 92, 0.25);
     color: var(--color-text-primary);
   }
 }
 
 @layer components {
-  /* Card base — matte obsidian, razor-sharp 1px border */
+  /* Card base — obsidian matte in dark, crisp clean paper in light */
   .card {
-    @apply bg-bg-surface border border-bg-border rounded-lg shadow-card;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-bg-border);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .card:hover {
-    @apply border-[#333333];
+  .dark .card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  .dark .card:hover {
+    border-color: #383838;
+  }
+  .light .card:hover {
+    border-color: #CBD5E1;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
   }
 
   /* Status badge */
   .status-dot {
     @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
   }
-  .status-dot-not-assessed { @apply bg-status-not-assessed; }
+  .status-dot-not-assessed {
+    background-color: #64748B;
+  }
+  .dark .status-dot-not-assessed {
+    background-color: #4A4A4A;
+  }
   .status-dot-needs-work   { @apply bg-status-needs-work; }
   .status-dot-developing   { @apply bg-status-developing; }
-  .status-dot-demonstrated { @apply bg-status-demonstrated; }
+  .status-dot-demonstrated {
+    background-color: #16A34A;
+  }
+  .dark .status-dot-demonstrated {
+    background-color: #A8F25C;
+  }
 }

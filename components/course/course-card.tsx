@@ -20,13 +20,13 @@ export function CourseCard({ course }: { course: Course }) {
       whileHover={{ y: -4, scale: 1.01 }}
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="card p-5 cursor-pointer flex flex-col justify-between h-[180px] group select-none hover:border-lime-300/30 transition-colors"
+      className="card p-5 cursor-pointer flex flex-col justify-between h-[180px] group select-none hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-colors"
     >
       <div>
         {/* Top meta row */}
         <div className="flex items-center justify-between mb-3">
           {course.course_code ? (
-            <span className="text-[11px] font-mono font-medium text-lime-300 bg-lime-300/10 border border-lime-300/20 px-2 py-0.5 rounded">
+            <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
               {course.course_code}
             </span>
           ) : (
@@ -42,7 +42,7 @@ export function CourseCard({ course }: { course: Course }) {
         </div>
 
         {/* Course title */}
-        <h3 className="font-medium text-text-primary text-[15px] leading-snug line-clamp-2 group-hover:text-lime-300 transition-colors">
+        <h3 className="font-medium text-text-primary text-[15px] leading-snug line-clamp-2 group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
           {course.title}
         </h3>
       </div>

@@ -56,7 +56,7 @@ export function CourseWorkspace({ course }: { course: Course }) {
             <RootwiseLogo variant="mark" size={22} />
             <div className="flex items-center gap-2">
               {course.course_code && (
-                <span className="text-[11px] font-mono font-medium text-lime-300 bg-lime-300/10 border border-lime-300/20 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
                   {course.course_code}
                 </span>
               )}
@@ -73,7 +73,7 @@ export function CourseWorkspace({ course }: { course: Course }) {
       </nav>
 
       {/* Tab bar */}
-      <div className="border-b border-bg-border bg-bg-surface/40">
+      <div className="border-b border-bg-border bg-bg-surface/60 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex gap-2 -mb-px overflow-x-auto py-1">
             {TABS.map((tab) => {
@@ -87,7 +87,7 @@ export function CourseWorkspace({ course }: { course: Course }) {
                     relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-md
                     ${
                       isActive
-                        ? "text-lime-300 font-semibold"
+                        ? "text-lime-700 dark:text-lime-300 font-semibold"
                         : "text-text-tertiary hover:text-text-secondary"
                     }
                   `}
@@ -96,7 +96,7 @@ export function CourseWorkspace({ course }: { course: Course }) {
                     <motion.div
                       layoutId="activeWorkspaceTab"
                       transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                      className="absolute inset-0 bg-lime-300/10 border border-lime-300/25 rounded-md"
+                      className="absolute inset-0 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/25 dark:border-lime-300/25 rounded-md"
                     />
                   )}
                   <Icon size={14} weight={isActive ? "fill" : "regular"} className="relative z-10" />
@@ -164,7 +164,7 @@ function OverviewTab({
       <div>
         <div className="flex items-center gap-2 mb-2">
           {course.course_code && (
-            <span className="text-xs font-mono text-lime-300 bg-lime-300/10 border border-lime-300/20 px-2 py-0.5 rounded">
+            <span className="text-xs font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
               {course.course_code}
             </span>
           )}
@@ -184,13 +184,13 @@ function OverviewTab({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
           onClick={() => onNavigate("materials")}
-          className="card p-5 cursor-pointer hover:border-bg-border-focus transition-all group"
+          className="card p-5 cursor-pointer hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-all group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono text-lime-300">Step 1</span>
-            <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
+            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300">Step 1</span>
+            <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-300 transition-colors">
+          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
             Upload Materials
           </h3>
           <p className="text-xs text-text-tertiary mt-1">
@@ -200,13 +200,13 @@ function OverviewTab({
 
         <div
           onClick={() => onNavigate("topics")}
-          className="card p-5 cursor-pointer hover:border-bg-border-focus transition-all group"
+          className="card p-5 cursor-pointer hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-all group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono text-lime-300">Step 2</span>
-            <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
+            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300">Step 2</span>
+            <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-300 transition-colors">
+          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
             Topic Outline
           </h3>
           <p className="text-xs text-text-tertiary mt-1">

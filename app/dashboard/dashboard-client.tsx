@@ -126,7 +126,7 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
                 </h2>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-1.5 text-xs text-lime-300 hover:text-lime-400 font-medium transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-lime-700 dark:text-lime-300 hover:text-lime-800 dark:hover:text-lime-400 font-semibold transition-colors"
                 >
                   <Plus size={14} weight="bold" />
                   New course
@@ -138,10 +138,10 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
                   onClick={() => setShowCreateModal(true)}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full border-2 border-dashed border-bg-border rounded-lg py-16 text-center hover:border-lime-300/30 transition-colors group"
+                  className="w-full border-2 border-dashed border-bg-border rounded-xl py-16 text-center hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-colors group bg-bg-surface/50"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-bg-elevated flex items-center justify-center mx-auto mb-3 group-hover:bg-lime-300/10 transition-colors">
-                    <Plus size={24} className="text-text-tertiary group-hover:text-lime-300 transition-colors" />
+                  <div className="w-12 h-12 rounded-xl bg-bg-elevated flex items-center justify-center mx-auto mb-3 group-hover:bg-lime-500/10 dark:group-hover:bg-lime-300/10 transition-colors">
+                    <Plus size={24} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors" />
                   </div>
                   <p className="text-text-secondary font-medium">Create your first course</p>
                   <p className="text-sm text-text-tertiary mt-1">
@@ -196,7 +196,7 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
         onClick={() => setShowCreateModal(true)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 bg-lime-300 text-text-inverse rounded-full w-12 h-12 flex items-center justify-center shadow-md sm:hidden hover:bg-lime-400 transition-colors"
+        className="fixed bottom-6 right-6 bg-lime-300 text-[#0A0A0A] font-bold rounded-full w-12 h-12 flex items-center justify-center shadow-lg sm:hidden hover:bg-lime-400 transition-colors"
         aria-label="Create course"
       >
         <Plus size={20} weight="bold" />

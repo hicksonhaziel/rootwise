@@ -59,17 +59,17 @@ export function RootwiseLogo({
           </svg>
         </div>
       ) : (
-        // Pure standalone organic mark in #A8F25C
+        // Standalone organic mark: deep forest lime in light, vibrant lime in dark
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="80 70 352 410"
           width={size}
           height={size}
           aria-hidden="true"
-          className="flex-shrink-0"
+          className="flex-shrink-0 text-lime-800 dark:text-lime-300 fill-current"
         >
           <path
-            fill="#A8F25C"
+            fill="currentColor"
             fillRule="evenodd"
             d="
               M 176 96
@@ -90,7 +90,7 @@ export function RootwiseLogo({
               C 236 240 256 162 300 146 Z
             "
           />
-          <circle cx="270" cy="452" r="15" fill="#A8F25C" />
+          <circle cx="270" cy="452" r="15" fill="currentColor" />
         </svg>
       )}
 

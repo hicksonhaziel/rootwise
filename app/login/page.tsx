@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { ArrowRight, LockKey, EnvelopeSimple, Sparkle, SpinnerGap } from "@phosphor-icons/react";
+import { ArrowRight, LockKey, EnvelopeSimple, SpinnerGap } from "@phosphor-icons/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,64 +28,71 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      // Auto-create / auto-confirm on backend with zero email verification
-      const authRes = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, password, action: "seamless" }),
-      });
+      if (mode === "signup") {
+        // Create pre-confirmed user instantly with zero email hurdles
+        const authRes = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, password, action: "signup" }),
+        });
 
-      const authData = await authRes.json();
-      if (!authRes.ok) {
-        throw new Error(authData.error || "Authentication error");
+        const authData = await authRes.json();
+        if (!authRes.ok) {
+          throw new Error(authData.error || "Failed to create account");
+        }
+
+        // Immediately sign into the session
+        const { error: loginErr } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (loginErr) throw loginErr;
+
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        // Sign in mode: try sign in directly
+        const { error: loginErr } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (loginErr) {
+          // If error is unconfirmed email, auto-confirm and retry immediately
+          if (
+            loginErr.message.toLowerCase().includes("not confirmed") ||
+            loginErr.message.toLowerCase().includes("email_not_confirmed")
+          ) {
+            setInfoMessage("Auto-confirming your account…");
+            const confRes = await fetch("/api/auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: cleanEmail, password, action: "confirm_existing" }),
+            });
+            const confData = await confRes.json();
+            if (!confRes.ok) {
+              throw new Error(confData.error || loginErr.message);
+            }
+
+            const { error: retryErr } = await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password,
+            });
+            if (retryErr) throw retryErr;
+
+            router.push("/dashboard");
+            router.refresh();
+            return;
+          }
+          throw loginErr;
+        }
+
+        router.push("/dashboard");
+        router.refresh();
       }
-
-      // Sign into browser session
-      const { error: loginErr } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
-
-      if (loginErr) throw loginErr;
-
-      router.push("/dashboard");
-      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Quick Demo Login for instant testing without email hurdles
-  async function handleQuickDemo() {
-    setLoading(true);
-    setError(null);
-    const demoEmail = "student@rootwise.edu";
-    const demoPass = "rootwise2026!";
-
-    try {
-      await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: demoEmail,
-          password: demoPass,
-          action: "signup",
-        }),
-      });
-
-      const { error: signErr } = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPass,
-      });
-
-      if (signErr) throw signErr;
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Demo sign in failed");
     } finally {
       setLoading(false);
     }
@@ -148,7 +155,7 @@ export default function LoginPage() {
         </div>
 
         {/* Auth card */}
-        <div className="card p-6 shadow-2xl relative">
+        <div className="card p-6 shadow-xl relative">
           {/* Mode switch pills with fluid layout animation */}
           <div className="flex bg-bg-elevated border border-bg-border rounded-lg p-1 mb-5 relative">
             <button
@@ -202,7 +209,7 @@ export default function LoginPage() {
                   animate={{ opacity: 1, height: "auto", y: 0 }}
                   exit={{ opacity: 0, height: 0, y: -4 }}
                   transition={{ duration: 0.2 }}
-                  className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2.5 overflow-hidden"
+                  className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2.5 overflow-hidden font-medium"
                 >
                   {error}
                 </motion.div>
@@ -213,7 +220,7 @@ export default function LoginPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="text-xs text-lime-300 bg-lime-300/10 border border-lime-300/20 rounded-md px-3 py-2 overflow-hidden flex items-center gap-1.5"
+                  className="text-xs text-lime-800 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 rounded-md px-3 py-2 overflow-hidden flex items-center gap-1.5 font-medium"
                 >
                   <SpinnerGap size={13} className="animate-spin" />
                   {infoMessage}
@@ -238,7 +245,7 @@ export default function LoginPage() {
                 required
                 autoFocus
                 placeholder="student@oauife.edu.ng"
-                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 transition-colors"
+                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 transition-colors"
               />
             </div>
 
@@ -259,7 +266,7 @@ export default function LoginPage() {
                 required
                 minLength={6}
                 placeholder="••••••••"
-                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 transition-colors"
+                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 transition-colors"
               />
             </div>
 
@@ -269,39 +276,21 @@ export default function LoginPage() {
               disabled={loading || !email.trim() || !password}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full mt-2 bg-lime-300 text-text-inverse text-xs font-bold py-2.5 rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="w-full mt-2 bg-lime-300 text-[#0A0A0A] text-xs font-bold py-2.5 rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
             >
               {loading ? (
                 <>
                   <SpinnerGap size={15} className="animate-spin" />
-                  <span>Authenticating…</span>
+                  <span>{mode === "login" ? "Signing in…" : "Creating account…"}</span>
                 </>
               ) : (
                 <>
-                  <span>{mode === "login" ? "Sign In" : "Get Started"}</span>
+                  <span>{mode === "login" ? "Sign In" : "Create Account"}</span>
                   <ArrowRight size={13} weight="bold" />
                 </>
               )}
             </motion.button>
           </form>
-
-          {/* Quick Demo Option */}
-          <div className="mt-5 pt-4 border-t border-bg-border/60 text-center">
-            <p className="text-[11px] text-text-tertiary mb-2.5">
-              Judging or quick testing?
-            </p>
-            <motion.button
-              type="button"
-              onClick={handleQuickDemo}
-              disabled={loading}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-2 px-3 bg-bg-elevated hover:bg-bg-border text-text-secondary hover:text-text-primary text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-bg-border"
-            >
-              <Sparkle size={13} weight="fill" className="text-lime-300" />
-              <span>Instant Demo Account Sign In</span>
-            </motion.button>
-          </div>
         </div>
       </motion.div>
     </div>

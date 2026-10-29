@@ -191,7 +191,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
     switch (status) {
       case "demonstrated":
         return (
-          <span className="text-[11px] font-mono text-lime-300 bg-lime-300/10 border border-lime-300/20 px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
             Demonstrated
           </span>
         );
@@ -221,7 +221,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
       {/* Official Disclaimer Banner (Blueprint & BUILD.md requirement) */}
       <div className="p-3 bg-bg-surface border border-bg-border rounded-lg flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs text-text-secondary">
-          <Info size={16} className="text-lime-300 shrink-0" weight="fill" />
+          <Info size={16} className="text-lime-700 dark:text-lime-300 shrink-0" weight="fill" />
           <span>
             <strong>Suggested topics, not your official syllabus</strong> —
             Extracted from uploaded materials. You can edit, rename, add, or delete any topic.
@@ -239,7 +239,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
           <button
             onClick={handleGenerateTopics}
             disabled={generating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-lime-300 text-text-inverse text-xs font-semibold rounded hover:bg-lime-400 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded hover:bg-lime-400 disabled:opacity-50 transition-colors shadow-sm"
           >
             {generating ? (
               <>
@@ -420,7 +420,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
                         {onSelectTopicForDiagnostic && (
                           <button
                             onClick={() => onSelectTopicForDiagnostic(topic.id)}
-                            className="px-2.5 py-1 bg-bg-elevated hover:bg-bg-border text-lime-300 text-xs font-medium rounded transition-colors mr-1"
+                            className="px-2.5 py-1 bg-bg-elevated hover:bg-bg-border text-lime-700 dark:text-lime-300 text-xs font-semibold rounded transition-colors mr-1"
                           >
                             Diagnose →
                           </button>

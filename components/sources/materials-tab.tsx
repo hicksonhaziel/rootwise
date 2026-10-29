@@ -270,7 +270,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-lime-300/10 border border-lime-300/20 rounded-lg flex items-center justify-between text-xs text-lime-300"
+          className="p-3 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 rounded-lg flex items-center justify-between text-xs text-lime-800 dark:text-lime-300 font-medium"
         >
           <span className="flex items-center gap-2">
             <CheckCircle size={16} weight="fill" />
@@ -279,7 +279,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
           {onNavigateToTopics && (
             <button
               onClick={onNavigateToTopics}
-              className="underline font-medium hover:text-lime-400"
+              className="underline font-semibold hover:text-lime-700 dark:hover:text-lime-400"
             >
               View Topic Map →
             </button>
@@ -306,8 +306,8 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
             border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
             ${
               dragActive
-                ? "border-lime-300 bg-lime-300/5"
-                : "border-bg-border hover:border-bg-border-focus bg-bg-surface/50"
+                ? "border-lime-500/50 dark:border-lime-300 bg-lime-500/5 dark:bg-lime-300/5"
+                : "border-bg-border hover:border-lime-500/40 dark:hover:border-lime-300/30 bg-bg-surface/50"
             }
             ${uploading ? "opacity-60 cursor-not-allowed" : ""}
           `}
@@ -324,7 +324,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
           />
 
           <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
-            <div className="w-10 h-10 rounded-full bg-bg-elevated border border-bg-border flex items-center justify-center text-lime-300">
+            <div className="w-10 h-10 rounded-full bg-bg-elevated border border-bg-border flex items-center justify-center text-lime-700 dark:text-lime-300">
               {uploading ? (
                 <SpinnerGap size={20} className="animate-spin" />
               ) : (
@@ -455,17 +455,17 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
                 <div className="flex items-center gap-3 shrink-0">
                   {/* Status pill */}
                   {source.processing_status === "ready" && (
-                    <span className="text-[11px] font-mono text-lime-300 bg-lime-300/10 border border-lime-300/20 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
                       Ready
                     </span>
                   )}
                   {source.processing_status === "scanned" && (
-                    <span className="text-[11px] font-mono text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono text-amber-500 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
                       Scanned PDF
                     </span>
                   )}
                   {source.processing_status === "processing" && (
-                    <span className="text-[11px] font-mono text-blue-400 bg-blue-400/10 border border-blue-400/20 px-2 py-0.5 rounded flex items-center gap-1">
+                    <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded flex items-center gap-1">
                       <SpinnerGap size={10} className="animate-spin" />
                       Processing
                     </span>
@@ -497,7 +497,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
-              className="w-full max-w-xl h-full bg-bg-surface border-l border-bg-border p-6 flex flex-col justify-between overflow-hidden"
+              className="w-full max-w-xl h-full bg-bg-surface border-l border-bg-border p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
             >
               <div>
                 <div className="flex items-center justify-between pb-4 border-b border-bg-border">
@@ -533,7 +533,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
                         className="p-3 bg-bg-elevated border border-bg-border rounded text-xs space-y-2"
                       >
                         <div className="flex items-center justify-between text-[11px] text-text-tertiary font-mono">
-                          <span className="text-lime-300">Chunk #{chunk.chunk_index}</span>
+                          <span className="text-lime-700 dark:text-lime-300 font-semibold">Chunk #{chunk.chunk_index}</span>
                           {chunk.page_number && <span>Page {chunk.page_number}</span>}
                         </div>
                         <p className="text-text-secondary leading-relaxed font-sans whitespace-pre-wrap">

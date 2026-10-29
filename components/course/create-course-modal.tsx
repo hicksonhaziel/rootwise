@@ -149,7 +149,7 @@ export function CreateCourseModal({ onClose, onCreated }: Props) {
                 disabled={loading || !title.trim()}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex-1 bg-lime-300 text-text-inverse text-sm font-semibold py-2.5 rounded-md hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 bg-lime-300 text-[#0A0A0A] text-sm font-bold py-2.5 rounded-md hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
               >
                 {loading ? "Creating…" : "Create course"}
               </motion.button>
