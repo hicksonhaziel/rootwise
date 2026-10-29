@@ -1,0 +1,21 @@
+{
+  "id": "case-14",
+  "title": "Code-switched answer with a real misconception",
+  "label": "Demo data — synthetic",
+  "topic": "Differentiation vs Continuity",
+  "question": "If a function is continuous at a sharp corner like |x| at 0, is it differentiable there?",
+  "student_answer": "Yes na, once the line continuous and no break dey inside, sharpness no matter at all, so differentiation must work sharp sharp.",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000003",
+      "page": 30,
+      "text": "Continuity does not guarantee differentiability. A sharp corner or cusp causes left and right derivative slopes to disagree, meaning the derivative does not exist."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "conceptual_misconception",
+    "should_have_belief_simulation": true
+  }
+}

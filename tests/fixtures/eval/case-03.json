@@ -1,0 +1,21 @@
+{
+  "id": "case-03",
+  "title": "Common conceptual misconception",
+  "label": "Demo data — synthetic",
+  "topic": "Limits and Continuity",
+  "question": "Does the existence of a limit at x = c imply the function must be continuous at x = c?",
+  "student_answer": "Yes, if the limit exists at x = c, then the function is automatically continuous at that point because the graph must connect smoothly.",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000001",
+      "page": 18,
+      "text": "A function is continuous at c if and only if lim_{x->c} f(x) exists, f(c) is defined, and lim_{x->c} f(x) = f(c). A removable discontinuity has a valid limit but fails continuity."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "conceptual_misconception",
+    "should_have_belief_simulation": true
+  }
+}

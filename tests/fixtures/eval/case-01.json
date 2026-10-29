@@ -1,0 +1,21 @@
+{
+  "id": "case-01",
+  "title": "Correct answer with clear reasoning",
+  "label": "Demo data — synthetic",
+  "topic": "Limits and Continuity",
+  "question": "Why is the limit of (x^2 - 1)/(x - 1) as x approaches 1 equal to 2, even though direct substitution gives 0/0?",
+  "student_answer": "Direct substitution yields the indeterminate form 0/0. Since we are evaluating the behavior as x approaches 1 and x != 1, we factor the numerator into (x - 1)(x + 1), cancel the common (x - 1) factor, and evaluate lim (x + 1) = 2.",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000001",
+      "page": 14,
+      "text": "When direct substitution results in the indeterminate form 0/0, algebraic simplification such as factoring (x^2 - 1) = (x - 1)(x + 1) allows evaluating the limit for x approaching c without requiring f(c) to be defined."
+    }
+  ],
+  "expected": {
+    "assessment": "correct",
+    "category": "appears_correct",
+    "should_have_belief_simulation": false
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "case-13",
+  "title": "Correct idea written in Nigerian Pidgin",
+  "label": "Demo data — synthetic",
+  "topic": "Limits Intuition",
+  "question": "Explain what lim_{x->2} f(x) means in your own words.",
+  "student_answer": "E mean say as x dey waka go near 2, the function f(x) dey draw go near that same target value, even if the point self empty for real life.",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000001",
+      "page": 12,
+      "text": "The limit describes the value that a function approaches as the input approaches a specified value, independent of whether the function is defined at that exact point."
+    }
+  ],
+  "expected": {
+    "assessment": "correct",
+    "category": "appears_correct",
+    "should_have_belief_simulation": false
+  }
+}

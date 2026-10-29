@@ -1,0 +1,21 @@
+{
+  "id": "case-09",
+  "title": "Two sources that appear to disagree",
+  "label": "Demo data — synthetic",
+  "topic": "Natural Numbers Definition",
+  "question": "Is 0 a natural number according to this course?",
+  "student_answer": "Lecture 1 says natural numbers start at 1, but the supplementary note mentions 0 is included.",
+  "confidence": "think_so",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000004",
+      "page": 2,
+      "text": "In MTH101, the set of natural numbers N is strictly defined as positive integers {1, 2, 3, ...}. Non-negative integers including zero are denoted as N_0."
+    }
+  ],
+  "expected": {
+    "assessment": "partial",
+    "category": "partially_correct",
+    "should_have_belief_simulation": false
+  }
+}

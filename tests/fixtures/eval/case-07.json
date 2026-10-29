@@ -1,0 +1,21 @@
+{
+  "id": "case-07",
+  "title": "Answer too vague to diagnose",
+  "label": "Demo data — synthetic",
+  "topic": "Differentiability",
+  "question": "Why is the absolute value function f(x) = |x| not differentiable at x = 0?",
+  "student_answer": "Because mathematics is weird and numbers do strange things when they are near zero.",
+  "confidence": "guessing",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000003",
+      "page": 30,
+      "text": "The function f(x) = |x| is not differentiable at x = 0 because the left derivative is -1 while the right derivative is +1. The corner point prevents a unique tangent line."
+    }
+  ],
+  "expected": {
+    "assessment": "insufficient",
+    "category": "insufficient_evidence",
+    "should_have_belief_simulation": false
+  }
+}

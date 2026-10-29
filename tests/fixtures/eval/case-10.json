@@ -1,0 +1,15 @@
+{
+  "id": "case-10",
+  "title": "Source with no extractable text",
+  "label": "Demo data — synthetic",
+  "topic": "Scanned Lecture Slide",
+  "question": "Explain the theorem shown in the slide image.",
+  "student_answer": "The slide shows a graph of a tangent line.",
+  "confidence": "guessing",
+  "chunks": [],
+  "expected": {
+    "assessment": "insufficient",
+    "category": "insufficient_evidence",
+    "should_have_belief_simulation": false
+  }
+}

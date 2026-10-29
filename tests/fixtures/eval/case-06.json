@@ -1,0 +1,21 @@
+{
+  "id": "case-06",
+  "title": "Partially correct answer",
+  "label": "Demo data — synthetic",
+  "topic": "One-Sided Limits",
+  "question": "Explain when a two-sided limit lim_{x->c} f(x) exists.",
+  "student_answer": "It exists if the right-hand limit exists as x approaches c from the positive side.",
+  "confidence": "think_so",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000001",
+      "page": 16,
+      "text": "Theorem: The two-sided limit lim_{x->c} f(x) = L exists if and only if both one-sided limits exist and are equal: lim_{x->c^-} f(x) = lim_{x->c^+} f(x) = L."
+    }
+  ],
+  "expected": {
+    "assessment": "partial",
+    "category": "partially_correct",
+    "should_have_belief_simulation": true
+  }
+}

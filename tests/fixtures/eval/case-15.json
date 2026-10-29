@@ -1,0 +1,22 @@
+{
+  "id": "case-15",
+  "title": "Confident wrong answer followed by correct re-check",
+  "label": "Demo data — synthetic",
+  "topic": "Chain Rule",
+  "question": "What is the derivative of sin(3x)?",
+  "student_answer": "The derivative of sin is cos, so it is just cos(3x).",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000003",
+      "page": 34,
+      "text": "By the chain rule, d/dx[sin(g(x))] = cos(g(x)) * gprime(x). Therefore, d/dx[sin(3x)] = 3*cos(3x)."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "conceptual_misconception",
+    "should_have_belief_simulation": true,
+    "confident_error": true
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "case-08",
+  "title": "Question outside uploaded material",
+  "label": "Demo data — synthetic",
+  "topic": "General Mathematics",
+  "question": "How do you calculate the Ricci tensor in 4-dimensional general relativity Riemannian manifolds?",
+  "student_answer": "You contract the Riemann curvature tensor over the first and third indices.",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000001",
+      "page": 1,
+      "text": "MTH101: Elementary Calculus. Syllabus covers limits, single-variable derivatives, polynomial curve sketching, and basic Riemann integrals."
+    }
+  ],
+  "expected": {
+    "assessment": "insufficient",
+    "category": "insufficient_evidence",
+    "should_have_belief_simulation": false
+  }
+}

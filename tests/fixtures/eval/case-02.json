@@ -1,0 +1,21 @@
+{
+  "id": "case-02",
+  "title": "Correct final answer but incorrect reasoning",
+  "label": "Demo data — synthetic",
+  "topic": "Limits and Continuity",
+  "question": "What is the limit of (x^2 - 4)/(x - 2) as x approaches 2?",
+  "student_answer": "The limit is 4 because you always just multiply the number 2 by 2 whenever you see a quadratic equation.",
+  "confidence": "sure",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000001",
+      "page": 15,
+      "text": "The limit equals 4 because the factor (x - 2) cancels out from the numerator (x - 2)(x + 2), leaving lim_{x->2} (x + 2) = 4."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "conceptual_misconception",
+    "should_have_belief_simulation": true
+  }
+}

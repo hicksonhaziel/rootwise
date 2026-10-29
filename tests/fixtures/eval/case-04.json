@@ -1,0 +1,21 @@
+{
+  "id": "case-04",
+  "title": "Missing prerequisite",
+  "label": "Demo data — synthetic",
+  "topic": "Definite Integrals",
+  "question": "Evaluate the integral of (2x + 3) dx from 0 to 2.",
+  "student_answer": "I do not know how to find the anti-derivative function because I do not know what the reverse power rule of differentiation is.",
+  "confidence": "guessing",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000002",
+      "page": 42,
+      "text": "Evaluation of definite integrals relies on the Fundamental Theorem of Calculus: integral of f(x)dx = F(b) - F(a), where F is the antiderivative obtained via power rules."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "missing_prerequisite",
+    "should_have_belief_simulation": false
+  }
+}

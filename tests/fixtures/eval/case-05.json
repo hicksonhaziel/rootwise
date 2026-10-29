@@ -1,0 +1,21 @@
+{
+  "id": "case-05",
+  "title": "Calculation or execution error",
+  "label": "Demo data — synthetic",
+  "topic": "Derivative Applications",
+  "question": "Differentiate f(x) = 3x^2 - 5x + 4.",
+  "student_answer": "Applying the power rule, derivative of 3x^2 is 6x, derivative of -5x is +5, and derivative of 4 is 0. So fprime(x) = 6x + 5.",
+  "confidence": "think_so",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000003",
+      "page": 28,
+      "text": "The derivative of c*x^n is c*n*x^(n-1). For linear terms d/dx(-5x) = -5. The derivative of a constant is 0."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "calculation_or_execution_error",
+    "should_have_belief_simulation": false
+  }
+}

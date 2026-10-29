@@ -1,0 +1,21 @@
+{
+  "id": "case-16",
+  "title": "Misconception where counterexample cannot be grounded",
+  "label": "Demo data — synthetic",
+  "topic": "Abstract Topology",
+  "question": "Why do you think every Hausdorff space is compact?",
+  "student_answer": "Because separation implies closure and closed sets are always compact in general topologies.",
+  "confidence": "think_so",
+  "chunks": [
+    {
+      "source_id": "00000000-0000-0000-0000-000000000006",
+      "page": 1,
+      "text": "Introduction to Metric Spaces: Definition of open and closed balls."
+    }
+  ],
+  "expected": {
+    "assessment": "incorrect",
+    "category": "conceptual_misconception",
+    "should_have_belief_simulation": false
+  }
+}

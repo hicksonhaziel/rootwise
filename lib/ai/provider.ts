@@ -100,8 +100,9 @@ export async function chat(options: ChatOptions): Promise<string> {
     } catch (err) {
       attempt++;
       if (attempt > AI_MAX_RETRIES) throw err;
-      // Brief backoff before retry
-      await new Promise((r) => setTimeout(r, 500));
+      const isRateLimit = err instanceof Error && err.message.includes("429");
+      const waitTime = isRateLimit ? 2500 : 500;
+      await new Promise((r) => setTimeout(r, waitTime));
     }
   }
 
