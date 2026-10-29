@@ -30,8 +30,14 @@ const SCANNED_PAGE_THRESHOLD = 0.7; // if >70% of pages are empty → scanned
  * Extract text from a PDF buffer, preserving page numbers.
  * Returns { pages, totalPages, isScanned }
  */
-export async function extractPdfText(buffer: ArrayBuffer): Promise<ExtractionResult> {
-  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+export async function extractPdfText(buffer: ArrayBuffer | Uint8Array): Promise<ExtractionResult> {
+  // Always clone buffer to prevent pdfjs/unpdf worker transfer from detaching caller's ArrayBuffer
+  const uint8 =
+    buffer instanceof Uint8Array
+      ? buffer.slice()
+      : new Uint8Array(buffer.slice(0));
+
+  const pdf = await getDocumentProxy(uint8);
   const { totalPages, text } = await extractText(pdf, { mergePages: false });
 
   const textArray = Array.isArray(text) ? text : [text];

@@ -69,4 +69,16 @@ describe("lib/pdf/extract — chunkPages", () => {
       expect(chunks[i].chunkIndex).toBe(i);
     }
   });
+
+  it("does not detach caller ArrayBuffer", async () => {
+    const { extractPdfText } = await import("../lib/pdf/extract");
+    const buffer = new ArrayBuffer(64);
+    expect(buffer.byteLength).toBe(64);
+    try {
+      await extractPdfText(buffer);
+    } catch {
+      // Expected PDF parse error on empty/dummy bytes
+    }
+    expect(buffer.byteLength).toBe(64);
+  });
 });

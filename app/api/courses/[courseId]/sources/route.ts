@@ -98,8 +98,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
       }
 
-      const buffer = await file.arrayBuffer();
-      const { pages, totalPages, isScanned } = await extractPdfText(buffer);
+      const rawArrayBuffer = await file.arrayBuffer();
+      const fileBuffer = Buffer.from(rawArrayBuffer);
+      const { pages, totalPages, isScanned } = await extractPdfText(rawArrayBuffer.slice(0));
 
       // Scanned PDF detection (BUILD.md §1.2 check)
       if (isScanned) {
@@ -136,13 +137,29 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Upload file to Supabase storage bucket
       const { error: uploadError } = await serviceClient.storage
         .from("sources")
-        .upload(storagePath, Buffer.from(buffer), {
+        .upload(storagePath, fileBuffer, {
           contentType: "application/pdf",
           upsert: true,
         });
 
       if (uploadError) {
-        console.error("[sources/upload] Storage error:", uploadError);
+        console.warn("[sources/upload] Storage error, attempting bucket setup/recovery:", uploadError.message);
+        if (
+          uploadError.message?.toLowerCase().includes("not found") ||
+          (uploadError as unknown as { error?: string })?.error?.toLowerCase().includes("not found")
+        ) {
+          try {
+            await serviceClient.storage.createBucket("sources", { public: false });
+            await serviceClient.storage
+              .from("sources")
+              .upload(storagePath, fileBuffer, {
+                contentType: "application/pdf",
+                upsert: true,
+              });
+          } catch (createErr) {
+            console.warn("[sources/upload] Could not auto-create sources bucket:", createErr);
+          }
+        }
       }
 
       // Insert source metadata record
