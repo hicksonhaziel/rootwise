@@ -4,6 +4,10 @@
 
 An open-source misconception diagnostic tool for university students, built for the **OPEN//BUILD 2026 — OSCA Ile-Ife Hacktoberfest Challenge** (Open-Weight Model Track).
 
+**Live App**: [https://rootwise-black.vercel.app](https://rootwise-black.vercel.app)  
+**Demo Course Workspace**: [MTH101 Calculus on Vercel](https://rootwise-black.vercel.app/courses/886d1c53-8799-441e-86cd-ea26f3304c9c)  
+**Documentation**: [Model Card](docs/MODEL_CARD.md) · [Evaluation Report](docs/EVALUATION.md) · [Privacy Guarantee](docs/PRIVACY.md)
+
 ---
 
 ## The Problem: Why Students Fail University Exams
@@ -211,6 +215,9 @@ npm run build
 - **Hackathon**: OPEN//BUILD 2026 — OSCA Ile-Ife Hacktoberfest Challenge
 - **Track**: Open-Weight Model Track
 - **Submission Date**: Thursday, 29 October 2026
+- **Live Deployment URL**: [https://rootwise-black.vercel.app](https://rootwise-black.vercel.app)
+- **Interactive Demo Course**: [https://rootwise-black.vercel.app/courses/886d1c53-8799-441e-86cd-ea26f3304c9c](https://rootwise-black.vercel.app/courses/886d1c53-8799-441e-86cd-ea26f3304c9c)
+- **Repository URL**: [https://github.com/hicksonhaziel/rootwise](https://github.com/hicksonhaziel/rootwise)
 
 ### Team Members
 - **Hickson Haziel** — Full-Stack Engineering, AI Pipeline & Ingestion Architecture
