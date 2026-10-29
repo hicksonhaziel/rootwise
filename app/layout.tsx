@@ -36,8 +36,20 @@ export default function RootLayout({
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="alternate icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon.png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preload"
+          href="/fonts/plus-jakarta-sans.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/jetbrains-mono.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem('rootwise-theme');var d=true;if(s==='light')d=false;else if(s==='dark')d=true;else d=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.add(d?'dark':'light');}catch(e){}})()`,

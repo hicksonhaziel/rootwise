@@ -48,8 +48,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ["'Plus Jakarta Sans'", "var(--font-geist-sans)", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["'JetBrains Mono'", "var(--font-geist-mono)", "monospace"],
+        sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["'JetBrains Mono'", "monospace"],
       },
       borderRadius: {
         sm: "6px",
