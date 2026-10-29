@@ -5,18 +5,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain,
   CheckCircle,
+  XCircle,
   WarningCircle,
   Lightbulb,
   Quotes,
   ArrowRight,
   ArrowsClockwise,
-  ThumbsDown,
   SpinnerGap,
   Sparkle,
   BookOpen,
-  Info,
+  GraduationCap,
+  MathOperations,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import type { StudyGuide } from "@/lib/ai/schemas";
 
 interface Topic {
   id: string;
@@ -30,17 +32,11 @@ interface Topic {
 interface Citation {
   source_id: string;
   source_filename?: string;
-  page: number | null;
+  page?: number | null;
   quote: string;
 }
 
-interface BeliefSimulation {
-  implied_belief: string;
-  consequence: string;
-  why_it_breaks: string;
-}
-
-interface DiagnosisResult {
+interface AssessmentResult {
   assessment: "correct" | "partial" | "incorrect" | "insufficient";
   what_seems_correct: string[];
   possible_gap: {
@@ -52,17 +48,21 @@ interface DiagnosisResult {
     kind: string;
     text: string;
   };
-  belief_simulation?: BeliefSimulation | null;
+  belief_simulation?: {
+    implied_belief: string;
+    consequence: string;
+    why_it_breaks: string;
+  } | null;
   prerequisite_topic_id?: string | null;
   follow_up_question: string;
   citations: Citation[];
 }
 
-interface ProgressResult {
+interface TopicProgress {
   status: string;
   status_reason: string;
   confident_error: boolean;
-  recheck_due_at: string | null;
+  recheck_due_at?: string | null;
 }
 
 interface Props {
@@ -85,32 +85,20 @@ export function DiagnosticSession({
   );
   const [loadingTopics, setLoadingTopics] = useState(true);
 
-  // Question state
-  const [question, setQuestion] = useState<string | null>(null);
-  const [contextHint, setContextHint] = useState<string | null>(null);
-  const [questionCitations, setQuestionCitations] = useState<Citation[]>([]);
-  const [generatingQuestion, setGeneratingQuestion] = useState(false);
-  const [questionError, setQuestionError] = useState<string | null>(null);
+  // Study Guide Masterclass state
+  const [studyGuide, setStudyGuide] = useState<StudyGuide | null>(null);
+  const [loadingGuide, setLoadingGuide] = useState(false);
+  const [guideError, setGuideError] = useState<string | null>(null);
+  const [topicProgress, setTopicProgress] = useState<TopicProgress | null>(null);
 
-  // Student answer state
-  const [studentAnswer, setStudentAnswer] = useState("");
+  // Diagnostic Check Multiple-Choice Answer state
+  const [selectedOption, setSelectedOption] = useState<"A" | "B" | "C" | "D" | null>(null);
   const [confidence, setConfidence] = useState<ConfidenceLevel | null>(null);
-  const [attemptType, setAttemptType] = useState<"initial" | "follow_up">("initial");
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingCheck, setSubmittingCheck] = useState(false);
+  const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Diagnosis feedback state
-  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
-  const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
-  const [progress, setProgress] = useState<ProgressResult | null>(null);
-  const [prerequisiteTopic, setPrerequisiteTopic] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
-  const [rejected, setRejected] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
-
-  // Fetch topics on mount
+  // Fetch topics list
   const fetchTopics = useCallback(async () => {
     try {
       setLoadingTopics(true);
@@ -120,7 +108,6 @@ export function DiagnosticSession({
       const list = data.topics ?? [];
       setTopics(list);
 
-      // If initialTopicId was passed and is valid, use it; otherwise pick first topic
       if (initialTopicId && list.some((t: Topic) => t.id === initialTopicId)) {
         setSelectedTopicId(initialTopicId);
       } else if (list.length > 0 && !selectedTopicId) {
@@ -137,55 +124,39 @@ export function DiagnosticSession({
     fetchTopics();
   }, [fetchTopics]);
 
-  // Sync when initialTopicId prop updates
   useEffect(() => {
     if (initialTopicId) {
       setSelectedTopicId(initialTopicId);
     }
   }, [initialTopicId]);
 
-  // Generate question when selected topic changes
-  const generateQuestionForTopic = useCallback(
-    async (topicId: string, customQuestion?: string) => {
-      if (customQuestion) {
-        setQuestion(customQuestion);
-        setContextHint("Follow-up test for the same core concept.");
-        setStudentAnswer("");
-        setConfidence(null);
-        setDiagnosis(null);
-        setProgress(null);
-        setRejected(false);
-        return;
-      }
-
-      setGeneratingQuestion(true);
-      setQuestionError(null);
-      setQuestion(null);
-      setDiagnosis(null);
-      setProgress(null);
-      setStudentAnswer("");
+  // Fetch Masterclass Study Guide when topic changes
+  const loadStudyGuide = useCallback(
+    async (topicId: string) => {
+      setLoadingGuide(true);
+      setGuideError(null);
+      setStudyGuide(null);
+      setSelectedOption(null);
       setConfidence(null);
-      setRejected(false);
-      setAttemptType("initial");
+      setAssessmentResult(null);
+      setSubmitError(null);
 
       try {
-        const res = await fetch(`/api/courses/${courseId}/diagnostics/question`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topicId }),
-        });
-
+        const res = await fetch(
+          `/api/courses/${courseId}/topics/${topicId}/study-guide`
+        );
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to generate question");
-
-        setQuestion(data.question);
-        setContextHint(data.context_hint || null);
-        setQuestionCitations(data.citations ?? []);
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load topic masterclass");
+        }
+        setStudyGuide(data.studyGuide);
+        setTopicProgress(data.progress || null);
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Error generating question";
-        setQuestionError(msg);
+        const msg =
+          err instanceof Error ? err.message : "Error loading study guide";
+        setGuideError(msg);
       } finally {
-        setGeneratingQuestion(false);
+        setLoadingGuide(false);
       }
     },
     [courseId]
@@ -193,17 +164,20 @@ export function DiagnosticSession({
 
   useEffect(() => {
     if (selectedTopicId) {
-      generateQuestionForTopic(selectedTopicId);
+      loadStudyGuide(selectedTopicId);
     }
-  }, [selectedTopicId, generateQuestionForTopic]);
+  }, [selectedTopicId, loadStudyGuide]);
 
-  // Submit Answer & Run Diagnosis
-  async function handleSubmitAnswer(e: React.FormEvent) {
-    e.preventDefault();
-    if (!studentAnswer.trim() || !confidence || !selectedTopicId || !question) return;
+  // Submit Multiple-Choice Concept Check
+  async function handleVerifyUnderstanding() {
+    if (!studyGuide || !selectedOption || !confidence || !selectedTopicId) return;
 
-    setSubmitting(true);
+    setSubmittingCheck(true);
     setSubmitError(null);
+
+    const check = studyGuide.diagnostic_check;
+    const selectedObj = check.options.find((o) => o.key === selectedOption);
+    const studentAnswerText = `Option ${selectedOption}: ${selectedObj?.text || ""}`;
 
     try {
       const res = await fetch(`/api/courses/${courseId}/diagnostics/assess`, {
@@ -211,82 +185,65 @@ export function DiagnosticSession({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topicId: selectedTopicId,
-          question,
-          studentAnswer: studentAnswer.trim(),
+          question: check.question,
+          studentAnswer: studentAnswerText,
           confidence,
-          attemptType,
+          attemptType: "initial",
+          studyCheck: {
+            selectedOption,
+            correctOption: check.correct_option,
+            distractorMisconceptions: check.distractor_misconceptions,
+            rationale: check.rationale,
+            beliefSimulation: check.belief_simulation || null,
+            citations: check.citations || [],
+          },
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to analyze answer");
+      if (!res.ok) throw new Error(data.error || "Failed to assess answer");
 
-      setDiagnosis(data.diagnosis);
-      setCurrentAttemptId(data.attempt?.id || null);
-      setProgress(data.progress);
-      setPrerequisiteTopic(data.prerequisiteTopic || null);
+      setAssessmentResult(data.diagnosis);
+      setTopicProgress(data.progress);
 
-      // Refresh topics so topic status pills update in real-time
+      // Refresh topics so topic status pill updates in navbar
       fetchTopics();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error analyzing answer";
+      const msg = err instanceof Error ? err.message : "Error verifying answer";
       setSubmitError(msg);
     } finally {
-      setSubmitting(false);
+      setSubmittingCheck(false);
     }
   }
 
-  // Reject Diagnosis
-  async function handleRejectDiagnosis() {
-    if (!currentAttemptId) return;
-    setRejecting(true);
-
-    try {
-      const res = await fetch(
-        `/api/courses/${courseId}/attempts/${currentAttemptId}/reject`,
-        { method: "PATCH" }
-      );
-      if (res.ok) {
-        setRejected(true);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRejecting(false);
+  // Advance to next topic
+  function handleNextTopic() {
+    const currentIndex = topics.findIndex((t) => t.id === selectedTopicId);
+    if (currentIndex >= 0 && currentIndex < topics.length - 1) {
+      setSelectedTopicId(topics[currentIndex + 1].id);
     }
-  }
-
-  // Start Retest
-  function handleStartRetest() {
-    if (!diagnosis?.follow_up_question) return;
-    setAttemptType("follow_up");
-    setQuestion(diagnosis.follow_up_question);
-    setContextHint("Follow-up attempt — proving the concept fix stuck.");
-    setStudentAnswer("");
-    setConfidence(null);
-    setDiagnosis(null);
-    setProgress(null);
-    setRejected(false);
   }
 
   const selectedTopic = topics.find((t) => t.id === selectedTopicId);
+  const currentStatus = topicProgress?.status || selectedTopic?.status || "not_assessed";
+  const hasConfidentError = topicProgress?.confident_error || selectedTopic?.confident_error;
 
   // If no topics exist in the course yet
   if (!loadingTopics && topics.length === 0) {
     return (
       <div className="card p-10 text-center max-w-xl mx-auto space-y-4">
-        <Brain size={36} className="mx-auto text-text-tertiary" />
-        <h3 className="text-base font-semibold text-text-primary">
-          No topics available for diagnosis
+        <Brain size={36} className="mx-auto text-zinc-500" />
+        <h3 className="text-base font-semibold text-zinc-100">
+          No topics available for study
         </h3>
-        <p className="text-xs text-text-secondary leading-relaxed">
-          Upload course PDFs in the Materials tab or create topics in the Topic Map first.
-          Rootwise needs syllabus topics and course notes to generate diagnostic questions.
+        <p className="text-xs text-zinc-400 leading-relaxed">
+          Upload course notes in the Materials tab or create topics in the Topic Map first.
+          Rootwise synthesizes your syllabus into intuitive full-page masterclasses.
         </p>
         {onNavigateToTopics && (
           <button
             onClick={onNavigateToTopics}
-            className="px-4 py-2 bg-lime-300 text-text-inverse text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5"
+            className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5"
           >
             Go to Topic Map
             <ArrowRight size={13} weight="bold" />
@@ -298,20 +255,20 @@ export function DiagnosticSession({
 
   return (
     <div className="space-y-6">
-      {/* Top Topic Switcher & Progress Bar */}
-      <div className="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Top Topic Switcher & Status Bar */}
+      <div className="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-bg-border bg-bg-surface">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 flex items-center justify-center text-lime-700 dark:text-lime-300">
-            <Brain size={18} weight="bold" />
+          <div className="w-9 h-9 rounded-xl bg-lime-500/10 border border-lime-500/30 flex items-center justify-center text-lime-400">
+            <GraduationCap size={20} weight="bold" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary">
-                Diagnostic Topic
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
+                Topic Masterclass
               </span>
-              {selectedTopic?.confident_error && (
-                <span className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-400 px-1.5 py-0.2 rounded font-mono">
-                  Confident Error Knot
+              {hasConfidentError && (
+                <span className="text-[10px] bg-red-500/10 border border-red-500/30 text-red-400 px-2 py-0.5 rounded font-mono font-medium">
+                  ⚠️ Confident Error Knot
                 </span>
               )}
             </div>
@@ -319,8 +276,8 @@ export function DiagnosticSession({
               <select
                 value={selectedTopicId || ""}
                 onChange={(e) => setSelectedTopicId(e.target.value)}
-                disabled={generatingQuestion || submitting}
-                className="bg-bg-elevated border border-bg-border rounded px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-lime-300 cursor-pointer disabled:opacity-50"
+                disabled={loadingGuide || submittingCheck}
+                className="bg-bg-elevated border border-bg-border rounded-lg px-3 py-1.5 text-xs font-semibold text-zinc-100 outline-none focus:border-lime-400 cursor-pointer disabled:opacity-50"
               >
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -335,462 +292,486 @@ export function DiagnosticSession({
         <div className="flex items-center gap-3">
           <span
             className={cn(
-              "text-[11px] font-mono font-medium px-2.5 py-1 rounded border",
-              selectedTopic?.status === "demonstrated"
-                ? "bg-lime-500/10 dark:bg-lime-300/10 border-lime-500/20 dark:border-lime-300/20 text-lime-700 dark:text-lime-300"
-                : selectedTopic?.status === "developing"
-                ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
-                : selectedTopic?.status === "needs_work"
-                ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                : "bg-bg-elevated border-bg-border text-text-tertiary"
+              "text-[11px] font-mono font-semibold px-3 py-1 rounded-full border",
+              currentStatus === "demonstrated"
+                ? "bg-lime-500/15 border-lime-500/40 text-lime-300"
+                : currentStatus === "developing"
+                ? "bg-blue-500/15 border-blue-500/40 text-blue-400"
+                : currentStatus === "needs_work"
+                ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
+                : "bg-bg-elevated border-zinc-800 text-zinc-400"
             )}
           >
-            {selectedTopic?.status === "demonstrated"
+            {currentStatus === "demonstrated"
               ? "Demonstrated ✓"
-              : selectedTopic?.status === "developing"
+              : currentStatus === "developing"
               ? "Developing"
-              : selectedTopic?.status === "needs_work"
+              : currentStatus === "needs_work"
               ? "Needs Work"
               : "Not Assessed"}
           </span>
 
           <button
-            onClick={() => selectedTopicId && generateQuestionForTopic(selectedTopicId)}
-            disabled={generatingQuestion || submitting}
-            className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors disabled:opacity-50"
-            title="Generate a new question for this topic"
+            onClick={() => selectedTopicId && loadStudyGuide(selectedTopicId)}
+            disabled={loadingGuide || submittingCheck}
+            className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-bg-elevated rounded-lg transition-colors disabled:opacity-50 border border-transparent hover:border-zinc-800"
+            title="Re-synthesize this study guide"
           >
             <ArrowsClockwise
-              size={15}
-              className={cn(generatingQuestion && "animate-spin")}
+              size={16}
+              className={cn(loadingGuide && "animate-spin text-lime-400")}
             />
           </button>
         </div>
       </div>
 
-      {/* Main 2-Column Split: Question & Feedback on Left, Source Citations on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
-        {/* Left Column: Interactive Diagnostic Workspace */}
+      {/* Main Grid: Comprehensive Study Guide on Left, Source Citations on Right */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+        {/* Left Column: Full-Page Masterclass Guide */}
         <div className="space-y-6">
-          {/* Question Box */}
-          <div className="card p-6 relative overflow-hidden space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-bg-elevated text-text-secondary border border-bg-border">
-                  {attemptType === "initial" ? "Step 1 of 2: Diagnostic" : "Step 2 of 2: Retest"}
-                </span>
-                {attemptType === "follow_up" && (
-                  <span className="text-[10px] font-mono text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 px-2 py-0.5 rounded">
-                    Linked Follow-Up
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] font-mono text-text-tertiary">
-                Grounded in notes
-              </span>
-            </div>
-
-            {generatingQuestion ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
-                <SpinnerGap size={24} className="animate-spin text-lime-700 dark:text-lime-300" />
-                <p className="text-xs text-text-secondary font-medium">
-                  Retrieving course notes and formulating diagnostic question…
-                </p>
-                <p className="text-[11px] text-text-tertiary">
-                  Targeting deep understanding, not surface recall.
-                </p>
-              </div>
-            ) : questionError ? (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 flex items-start gap-2.5">
-                <WarningCircle size={16} className="shrink-0 mt-0.5" weight="fill" />
-                <div className="space-y-2">
-                  <p>{questionError}</p>
-                  <button
-                    onClick={() => selectedTopicId && generateQuestionForTopic(selectedTopicId)}
-                    className="px-3 py-1 bg-bg-elevated hover:bg-bg-border text-text-primary rounded text-xs font-medium"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            ) : question ? (
-              <div className="space-y-3">
-                <h3 className="text-base sm:text-lg font-semibold text-text-primary leading-snug">
-                  {question}
+          {loadingGuide ? (
+            <div className="card p-16 flex flex-col items-center justify-center gap-4 text-center">
+              <SpinnerGap size={36} className="animate-spin text-lime-400" />
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-zinc-100">
+                  Synthesizing Topic Masterclass…
                 </h3>
-                {contextHint && (
-                  <div className="flex items-center gap-2 text-xs text-text-secondary bg-bg-elevated/60 px-3 py-2 rounded-md border border-bg-border/60">
-                    <Info size={14} className="text-lime-700 dark:text-lime-300 shrink-0" />
-                    <span>{contextHint}</span>
-                  </div>
+                <p className="text-xs text-zinc-400 max-w-sm">
+                  Grounding explanations, extracting core formulas, and mapping common student traps from your lecture notes.
+                </p>
+              </div>
+            </div>
+          ) : guideError ? (
+            <div className="card p-6 bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-start gap-3">
+              <WarningCircle size={20} className="shrink-0 mt-0.5" weight="fill" />
+              <div className="space-y-3">
+                <p className="font-medium">{guideError}</p>
+                <button
+                  onClick={() => selectedTopicId && loadStudyGuide(selectedTopicId)}
+                  className="px-4 py-1.5 bg-bg-elevated hover:bg-bg-border text-zinc-100 rounded-lg text-xs font-semibold"
+                >
+                  Retry Synthesis
+                </button>
+              </div>
+            </div>
+          ) : studyGuide ? (
+            <div className="space-y-6">
+              {/* 1. Topic Masterclass Header Banner */}
+              <div className="card p-7 border-bg-border bg-gradient-to-b from-bg-surface to-bg-elevated/40 space-y-3">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-lime-400">
+                  <Sparkle size={14} weight="fill" />
+                  <span>AI Comprehensive Study Guide</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-zinc-100 tracking-tight leading-tight">
+                  {selectedTopic?.title}
+                </h1>
+                {selectedTopic?.description && (
+                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">
+                    {selectedTopic.description}
+                  </p>
                 )}
               </div>
-            ) : null}
 
-            {/* Answer Form (Hidden once diagnosed unless in retest) */}
-            {question && !diagnosis && (
-              <form onSubmit={handleSubmitAnswer} className="space-y-5 pt-2">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                      Your Reasoning
-                    </label>
-                    <span className="text-[11px] text-text-tertiary">
-                      English, Pidgin, or mixed is welcome
-                    </span>
-                  </div>
-                  <textarea
-                    rows={4}
-                    required
-                    disabled={submitting}
-                    value={studentAnswer}
-                    onChange={(e) => setStudentAnswer(e.target.value)}
-                    placeholder="Explain in your own words why this happens or what steps you would take…"
-                    className="w-full bg-bg-elevated border border-bg-border rounded-xl p-3.5 text-xs sm:text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 resize-y disabled:opacity-50 transition-colors"
-                  />
+              {/* 2. 🎓 Core Concept & Intuition */}
+              <div className="card p-6 border-bg-border bg-bg-surface space-y-3">
+                <div className="flex items-center gap-2 text-lime-400 text-xs font-bold uppercase tracking-wider">
+                  <Lightbulb size={18} weight="fill" />
+                  <span>Core Concept & Intuition</span>
+                </div>
+                <div className="text-xs sm:text-sm text-zinc-200 leading-relaxed space-y-3 font-sans">
+                  {studyGuide.core_concept.split("\n\n").map((para, i) => (
+                    <p key={i} className="leading-relaxed">
+                      {para}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. 📐 Key Rules & Formulas */}
+              <div className="card p-6 border-bg-border bg-bg-surface space-y-3">
+                <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
+                  <MathOperations size={18} weight="bold" />
+                  <span>Key Rules & Fundamental Formulas</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2.5 pt-1">
+                  {studyGuide.key_rules.map((rule, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-bg-base/80 rounded-xl border border-zinc-800/80 flex items-start gap-3 text-xs leading-relaxed"
+                    >
+                      <span className="w-5 h-5 rounded-md bg-cyan-500/10 text-cyan-400 font-mono font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span className="text-zinc-200 font-medium">{rule}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. ⚠️ Common Traps & Misconceptions */}
+              <div className="card p-6 border-amber-500/30 bg-amber-500/5 space-y-3">
+                <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
+                  <WarningCircle size={18} weight="fill" />
+                  <span>Exam Pitfalls & Common Misconceptions</span>
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  These are subtle traps university professors frequently use in test questions:
+                </p>
+                <div className="grid grid-cols-1 gap-2.5 pt-1">
+                  {studyGuide.pitfalls.map((pitfall, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-bg-base/90 rounded-xl border border-amber-500/20 flex items-start gap-3 text-xs leading-relaxed"
+                    >
+                      <span className="text-amber-400 font-bold shrink-0 mt-0.5">⚠️</span>
+                      <span className="text-zinc-300">{pitfall}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 5. 📝 Step-by-Step Worked Problem */}
+              <div className="card p-6 border-bg-border bg-bg-surface space-y-4">
+                <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
+                  <BookOpen size={18} weight="fill" />
+                  <span>Step-by-Step Worked Example</span>
                 </div>
 
-                {/* Confidence Tap Buttons (BUILD.md §2.2) */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
-                    How confident are you? *
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    {[
-                      {
-                        id: "sure" as const,
-                        label: "Sure",
-                        sub: "Ready to bet on it",
-                        badge: "✓",
-                      },
-                      {
-                        id: "think_so" as const,
-                        label: "Think so",
-                        sub: "Reasonably sure",
-                        badge: "?",
-                      },
-                      {
-                        id: "guessing" as const,
-                        label: "Guessing",
-                        sub: "Uncertain intuition",
-                        badge: "🎲",
-                      },
-                    ].map((opt) => {
-                      const isSelected = confidence === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          disabled={submitting}
-                          onClick={() => setConfidence(opt.id)}
+                <div className="p-4 bg-bg-base rounded-xl border border-zinc-800 space-y-2">
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider font-semibold">
+                    Problem Statement
+                  </span>
+                  <p className="text-xs sm:text-sm font-semibold text-zinc-100 leading-snug">
+                    {studyGuide.worked_example.problem}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider font-semibold">
+                    Solution Walkthrough
+                  </span>
+                  <div className="space-y-2">
+                    {studyGuide.worked_example.solution_steps.map((step, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 bg-bg-elevated/40 rounded-xl border border-zinc-800/80 text-xs text-zinc-300 leading-relaxed flex items-start gap-2.5"
+                      >
+                        <span className="text-purple-400 font-bold">•</span>
+                        <span>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-xs text-purple-300 flex items-start gap-2">
+                  <Sparkle size={16} className="shrink-0 mt-0.5 text-purple-400" weight="fill" />
+                  <p>
+                    <strong className="text-purple-200">Key Takeaway: </strong>
+                    {studyGuide.worked_example.key_takeaway}
+                  </p>
+                </div>
+              </div>
+
+              {/* 6. 🎯 1-Minute Concept Mastery Self-Check (Multiple-Choice A, B, C, D) */}
+              <div className="card p-6 border-lime-500/30 bg-gradient-to-b from-bg-surface to-bg-elevated/30 space-y-5">
+                <div className="flex items-center justify-between border-b border-bg-border pb-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-mono text-lime-400 uppercase tracking-wider font-semibold">
+                      Diagnostic Check
+                    </span>
+                    <h3 className="text-sm sm:text-base font-bold text-zinc-100">
+                      Test Your Understanding (Select A, B, C, or D)
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    No typing required
+                  </span>
+                </div>
+
+                <p className="text-xs sm:text-sm font-semibold text-zinc-200 leading-relaxed">
+                  {studyGuide.diagnostic_check.question}
+                </p>
+
+                {/* 4 Interactive Option Cards */}
+                <div className="grid grid-cols-1 gap-2.5">
+                  {studyGuide.diagnostic_check.options.map((opt) => {
+                    const isSelected = selectedOption === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        disabled={submittingCheck || Boolean(assessmentResult)}
+                        onClick={() => setSelectedOption(opt.key)}
+                        className={cn(
+                          "p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all text-xs leading-relaxed disabled:opacity-75",
+                          isSelected
+                            ? "bg-lime-500/15 border-lime-400 ring-1 ring-lime-400/40 text-zinc-100 shadow-sm"
+                            : "bg-bg-base/70 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-bg-base"
+                        )}
+                      >
+                        <span
                           className={cn(
-                            "p-2.5 sm:p-3 rounded-lg border text-left transition-all disabled:opacity-50",
+                            "w-6 h-6 rounded-lg font-mono font-bold flex items-center justify-center text-xs shrink-0 transition-colors",
                             isSelected
-                              ? "bg-lime-500/10 dark:bg-lime-300/10 border-lime-600 dark:border-lime-300 ring-1 ring-lime-500/30"
-                              : "bg-bg-elevated border-bg-border hover:border-bg-border/80"
+                              ? "bg-lime-400 text-black font-extrabold"
+                              : "bg-zinc-800 text-zinc-400 border border-zinc-700"
                           )}
                         >
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={cn(
-                                "text-xs font-bold",
-                                isSelected
-                                  ? "text-lime-700 dark:text-lime-300"
-                                  : "text-text-primary"
-                              )}
-                            >
-                              {opt.label}
-                            </span>
-                            <span className="text-xs font-mono">{opt.badge}</span>
-                          </div>
-                          <p className="text-[10px] text-text-tertiary mt-0.5 truncate hidden sm:block">
-                            {opt.sub}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          {opt.key}
+                        </span>
+                        <span className={cn("pt-0.5", isSelected ? "font-semibold text-zinc-100" : "text-zinc-300")}>
+                          {opt.text}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
+                {/* Confidence Tap Buttons */}
+                {!assessmentResult && (
+                  <div className="space-y-2 pt-2 border-t border-bg-border/60">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        How confident are you? *
+                      </label>
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        Detects high-confidence knots
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {[
+                        { id: "sure" as const, label: "Sure", sub: "100% certain", icon: "✓" },
+                        { id: "think_so" as const, label: "Think so", sub: "Reasonably sure", icon: "?" },
+                        { id: "guessing" as const, label: "Guessing", sub: "Uncertain intuition", icon: "🎲" },
+                      ].map((opt) => {
+                        const isSelected = confidence === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            disabled={submittingCheck}
+                            onClick={() => setConfidence(opt.id)}
+                            className={cn(
+                              "p-3 rounded-xl border text-left transition-all disabled:opacity-50",
+                              isSelected
+                                ? "bg-lime-500/15 border-lime-400 ring-1 ring-lime-400/40 text-zinc-100"
+                                : "bg-bg-base/70 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className={cn("text-xs font-bold", isSelected ? "text-lime-300" : "text-zinc-200")}>
+                                {opt.label}
+                              </span>
+                              <span className="text-xs font-mono">{opt.icon}</span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 mt-0.5 truncate hidden sm:block">
+                              {opt.sub}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {submitError && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 flex items-center gap-2">
-                    <WarningCircle size={15} weight="fill" />
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-center gap-2">
+                    <WarningCircle size={16} weight="fill" />
                     <span>{submitError}</span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between pt-2">
-                  <p className="text-[11px] text-text-tertiary">
-                    {!confidence
-                      ? "Select confidence above to submit"
-                      : "We diagnose your reasoning, not grammar."}
-                  </p>
-
-                  <button
-                    type="submit"
-                    disabled={submitting || !studentAnswer.trim() || !confidence}
-                    className="flex items-center gap-1.5 px-5 py-2.5 bg-lime-300 text-text-inverse text-xs font-bold rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  >
-                    {submitting ? (
-                      <>
-                        <SpinnerGap size={14} className="animate-spin" />
-                        Diagnosing reasoning…
-                      </>
-                    ) : (
-                      <>
-                        Submit Answer
-                        <ArrowRight size={13} weight="bold" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          {/* Diagnostic Assessment Screen (BUILD.md §2.6) */}
-          <AnimatePresence>
-            {diagnosis && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
-                className="space-y-4"
-              >
-                {/* 1. Top Assessment Banner */}
-                <div
-                  className={cn(
-                    "p-4 rounded-xl border flex items-center justify-between",
-                    diagnosis.assessment === "correct"
-                      ? "bg-lime-500/10 border-lime-500/25 text-lime-800 dark:text-lime-300"
-                      : diagnosis.assessment === "partial"
-                      ? "bg-blue-500/10 border-blue-500/25 text-blue-400"
-                      : diagnosis.assessment === "insufficient"
-                      ? "bg-bg-elevated border-bg-border text-text-secondary"
-                      : "bg-amber-500/10 border-amber-500/25 text-amber-400"
-                  )}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Sparkle size={18} weight="fill" />
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider">
-                        {diagnosis.assessment === "correct"
-                          ? "Sound Reasoning"
-                          : diagnosis.assessment === "partial"
-                          ? "Partially Correct Reasoning"
-                          : diagnosis.assessment === "insufficient"
-                          ? "Insufficient Evidence"
-                          : "Misconception Identified"}
-                      </span>
-                      <p className="text-[11px] opacity-80 mt-0.5">
-                        {diagnosis.possible_gap.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {progress && (
-                    <span className="text-xs font-mono font-medium px-2.5 py-1 rounded bg-bg-surface/80 border border-bg-border text-text-primary">
-                      Status: {progress.status}
-                    </span>
-                  )}
-                </div>
-
-                {/* 2. What You Got Right (BUILD.md §2.6) */}
-                {diagnosis.what_seems_correct.length > 0 && (
-                  <div className="card p-4 space-y-2 border-l-4 border-l-lime-500 dark:border-l-lime-400">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-lime-700 dark:text-lime-400 flex items-center gap-1.5">
-                      <CheckCircle size={15} weight="fill" />
-                      What you got right
-                    </h4>
-                    <ul className="space-y-1.5 text-xs text-text-secondary">
-                      {diagnosis.what_seems_correct.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-lime-600 dark:text-lime-400 font-bold">•</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 3. Possible Gap & Grounded Explanation */}
-                <div className="card p-4 space-y-2 border-l-4 border-l-amber-500">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                      <Lightbulb size={15} weight="fill" />
-                      Possible gap
-                    </h4>
-                    <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
-                      {diagnosis.possible_gap.category.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    {diagnosis.explanation}
-                  </p>
-                </div>
-
-                {/* 4. Wrong-Belief Simulator (BUILD.md §2.5 [WOW moment]) */}
-                {diagnosis.belief_simulation && (
-                  <div className="card p-5 space-y-3 border-l-4 border-l-red-500 bg-red-500/5">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
-                      <WarningCircle size={15} weight="fill" />
-                      Where it breaks (Belief Simulation)
-                    </h4>
-                    <p className="text-[11px] text-text-tertiary">
-                      If your underlying assumption was applied universally, here is the domino effect:
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1 font-sans text-xs">
-                      {/* Step 1: Implied Belief */}
-                      <div className="bg-bg-elevated p-3 rounded-lg border border-bg-border space-y-1">
-                        <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider block">
-                          1. Implied Belief
-                        </span>
-                        <p className="text-text-primary text-xs leading-relaxed">
-                          {diagnosis.belief_simulation.implied_belief}
-                        </p>
-                      </div>
-
-                      {/* Step 2: Consequence */}
-                      <div className="bg-bg-elevated p-3 rounded-lg border border-bg-border space-y-1">
-                        <span className="text-[10px] font-mono text-orange-400 uppercase tracking-wider block">
-                          2. Consequence
-                        </span>
-                        <p className="text-text-primary text-xs leading-relaxed">
-                          {diagnosis.belief_simulation.consequence}
-                        </p>
-                      </div>
-
-                      {/* Step 3: Why it Breaks */}
-                      <div className="bg-bg-elevated p-3 rounded-lg border border-red-500/30 space-y-1 bg-red-500/5">
-                        <span className="text-[10px] font-mono text-red-400 uppercase tracking-wider block font-bold">
-                          3. Why It Breaks
-                        </span>
-                        <p className="text-text-primary text-xs leading-relaxed font-medium">
-                          {diagnosis.belief_simulation.why_it_breaks}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 5. Root Trace (BUILD.md §2.9) */}
-                {prerequisiteTopic && (
-                  <div className="card p-4 space-y-3 border border-purple-500/30 bg-purple-500/5">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                        <Brain size={15} weight="bold" />
-                        Root Trace: Missing Prerequisite
-                      </h4>
-                      <span className="text-[10px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
-                        Foundation Gap
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-text-secondary">
-                      This misconception stems from an earlier concept:{" "}
-                      <strong className="text-text-primary">{prerequisiteTopic.title}</strong>.
-                      We recommend mastering the foundation before continuing with this topic.
-                    </p>
-
+                {!assessmentResult && (
+                  <div className="pt-2 flex justify-end">
                     <button
-                      onClick={() => setSelectedTopicId(prerequisiteTopic.id)}
-                      className="px-3 py-1.5 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      type="button"
+                      disabled={submittingCheck || !selectedOption || !confidence}
+                      onClick={handleVerifyUnderstanding}
+                      className={cn(
+                        "px-6 py-2.5 bg-lime-300 hover:bg-lime-400 text-black text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-[0.98]",
+                        (!selectedOption || !confidence || submittingCheck) &&
+                          "opacity-40 cursor-not-allowed hover:bg-lime-300"
+                      )}
                     >
-                      Diagnose Prerequisite: {prerequisiteTopic.title}
-                      <ArrowRight size={12} weight="bold" />
+                      {submittingCheck ? (
+                        <>
+                          <SpinnerGap size={15} className="animate-spin" />
+                          <span>Checking reasoning…</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Verify Understanding</span>
+                          <ArrowRight size={14} weight="bold" />
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
 
-                {/* 6. Try this next / Suggestion */}
-                {diagnosis.next_step && (
-                  <div className="card p-4 space-y-1.5 bg-bg-surface border-bg-border">
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary">
-                      Try this next ({diagnosis.next_step.kind})
-                    </span>
-                    <p className="text-xs text-text-secondary">
-                      {diagnosis.next_step.text}
-                    </p>
-                  </div>
-                )}
-
-                {/* 7. Action Bar: Reject & Retest Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                  {/* Rejection button (BUILD.md §2.6) */}
-                  <div>
-                    {rejected ? (
-                      <span className="text-xs text-text-tertiary italic">
-                        Feedback noted. Diagnosis marked as unrepresentative.
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={rejecting}
-                        onClick={handleRejectDiagnosis}
-                        className="text-xs text-text-tertiary hover:text-text-secondary flex items-center gap-1.5 py-1 px-2 rounded hover:bg-bg-elevated transition-colors disabled:opacity-50"
+                {/* Assessment Feedback Banner (Shown after submission) */}
+                <AnimatePresence>
+                  {assessmentResult && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4 pt-4 border-t border-bg-border"
+                    >
+                      <div
+                        className={cn(
+                          "p-4 rounded-xl border flex items-center justify-between",
+                          assessmentResult.assessment === "correct"
+                            ? "bg-lime-500/10 border-lime-500/30 text-lime-300"
+                            : "bg-red-500/10 border-red-500/30 text-red-300"
+                        )}
                       >
-                        <ThumbsDown size={14} />
-                        {rejecting ? "Saving feedback…" : "This doesn't describe my thinking"}
-                      </button>
-                    )}
-                  </div>
+                        <div className="flex items-center gap-3">
+                          {assessmentResult.assessment === "correct" ? (
+                            <CheckCircle size={22} weight="fill" className="text-lime-400 shrink-0" />
+                          ) : (
+                            <XCircle size={22} weight="fill" className="text-red-400 shrink-0" />
+                          )}
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider block">
+                              {assessmentResult.assessment === "correct"
+                                ? "Sound Conceptual Understanding! ✓"
+                                : "Misconception Trap Sprung"}
+                            </span>
+                            <p className="text-xs opacity-90 mt-0.5">
+                              {assessmentResult.possible_gap.description}
+                            </p>
+                          </div>
+                        </div>
 
-                  {/* Retest Loop button (BUILD.md §2.7) */}
-                  <button
-                    type="button"
-                    onClick={handleStartRetest}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-lime-300 text-text-inverse text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <span>Test with Follow-Up Question</span>
-                    <ArrowRight size={13} weight="bold" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                        {topicProgress && (
+                          <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-bg-surface border border-bg-border text-zinc-200">
+                            Status: {topicProgress.status}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Official Rationale & Explanation */}
+                      <div className="card p-4 space-y-2 border-l-4 border-l-lime-400 bg-bg-surface">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-lime-400 font-bold block">
+                          Course Rationale & Insight
+                        </span>
+                        <p className="text-xs text-zinc-300 leading-relaxed">
+                          {assessmentResult.explanation}
+                        </p>
+                      </div>
+
+                      {/* Wrong-Belief Simulator Dominoes (BUILD.md §2.5) */}
+                      {assessmentResult.belief_simulation && (
+                        <div className="card p-4 space-y-3 border-l-4 border-l-red-500 bg-red-950/10">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+                              <WarningCircle size={15} weight="fill" />
+                              Where It Breaks (Belief Simulation)
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                            <div className="bg-bg-elevated p-3 rounded-lg border border-zinc-800 space-y-1">
+                              <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider block">
+                                1. Implied Belief
+                              </span>
+                              <p className="text-zinc-200 leading-snug">
+                                {assessmentResult.belief_simulation.implied_belief}
+                              </p>
+                            </div>
+
+                            <div className="bg-bg-elevated p-3 rounded-lg border border-zinc-800 space-y-1">
+                              <span className="text-[10px] font-mono text-orange-400 uppercase tracking-wider block">
+                                2. Consequence
+                              </span>
+                              <p className="text-zinc-200 leading-snug">
+                                {assessmentResult.belief_simulation.consequence}
+                              </p>
+                            </div>
+
+                            <div className="bg-bg-elevated p-3 rounded-lg border border-red-500/40 space-y-1 bg-red-500/10">
+                              <span className="text-[10px] font-mono text-red-400 uppercase tracking-wider block font-bold">
+                                3. Why It Breaks
+                              </span>
+                              <p className="text-zinc-100 leading-snug font-medium">
+                                {assessmentResult.belief_simulation.why_it_breaks}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Post-Check Actions */}
+                      <div className="flex items-center justify-between pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssessmentResult(null);
+                            setSelectedOption(null);
+                            setConfidence(null);
+                          }}
+                          className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-bg-elevated transition-colors"
+                        >
+                          <ArrowsClockwise size={14} />
+                          <span>Retry Self-Check</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleNextTopic}
+                          className="px-5 py-2 bg-lime-300 hover:bg-lime-400 text-black text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                        >
+                          <span>Advance to Next Topic</span>
+                          <ArrowRight size={13} weight="bold" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          ) : null}
         </div>
 
-        {/* Right Column: Source Evidence & Verified Citations Rail */}
+        {/* Right Column: Grounded Citations & Lecture Excerpts Rail */}
         <div className="space-y-4">
-          <div className="card p-5 space-y-3 sticky top-20">
+          <div className="card p-5 space-y-3 sticky top-20 border-bg-border bg-bg-surface">
             <div className="flex items-center justify-between border-b border-bg-border pb-3">
-              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
-                <Quotes size={15} className="text-lime-700 dark:text-lime-300" weight="fill" />
-                Source Evidence
+              <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                <Quotes size={16} className="text-lime-400" weight="fill" />
+                <span>Source Evidence</span>
               </h4>
-              <span className="text-[10px] font-mono text-text-tertiary">
-                Verified against notes
+              <span className="text-[10px] font-mono text-zinc-500">
+                Course Grounding
               </span>
             </div>
 
-            {/* Display citations from either active diagnosis or initial question */}
             {(() => {
-              const activeCitations = diagnosis ? diagnosis.citations : questionCitations;
+              const citations: Citation[] = (studyGuide?.diagnostic_check.citations || []) as Citation[];
 
-              if (activeCitations.length === 0) {
+              if (citations.length === 0) {
                 return (
-                  <div className="py-6 text-center text-xs text-text-tertiary">
-                    <BookOpen size={24} className="mx-auto mb-2 opacity-50" />
-                    <p>Not enough direct support in notes for specific excerpts.</p>
+                  <div className="py-8 text-center text-xs text-zinc-500 space-y-2">
+                    <BookOpen size={24} className="mx-auto opacity-50 text-zinc-400" />
+                    <p>Verified excerpts will be cited as you explore course materials.</p>
                   </div>
                 );
               }
 
               return (
                 <div className="space-y-3">
-                  {activeCitations.map((cit, idx) => (
+                  {citations.map((cit, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-bg-elevated/70 border border-bg-border rounded-lg space-y-1.5 text-xs"
+                      className="p-3 bg-bg-elevated/70 border border-zinc-800 rounded-xl space-y-1.5 text-xs"
                     >
-                      <div className="flex items-center justify-between text-[11px] font-mono text-lime-700 dark:text-lime-300">
-                        <span className="truncate max-w-[180px]">
-                          {cit.source_filename || "Course Material"}
+                      <div className="flex items-center justify-between text-[11px] font-mono text-lime-400">
+                        <span className="truncate max-w-[170px]">
+                          {cit.source_filename || "Lecture Notes"}
                         </span>
-                        {cit.page !== null && <span>Page {cit.page}</span>}
+                        {cit.page && <span>Page {cit.page}</span>}
                       </div>
-                      <blockquote className="text-text-secondary italic pl-2 border-l-2 border-lime-500/40 dark:border-lime-300/40 text-[11px] leading-relaxed">
+                      <blockquote className="text-zinc-300 italic pl-2.5 border-l-2 border-lime-400/50 text-[11px] leading-relaxed">
                         &ldquo;{cit.quote}&rdquo;
                       </blockquote>
                     </div>
@@ -800,7 +781,7 @@ export function DiagnosticSession({
             })()}
 
             <div className="pt-2 border-t border-bg-border/60">
-              <p className="text-[10px] text-text-tertiary leading-normal">
+              <p className="text-[10px] text-zinc-500 leading-normal">
                 Every citation is verified against stored chunks in Postgres. Hallucinated quotes are dropped automatically.
               </p>
             </div>

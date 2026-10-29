@@ -31,6 +31,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       studentAnswer,
       confidence,
       attemptType = "initial",
+      studyCheck,
     } = body;
 
     if (!topicId || !question || !studentAnswer || !confidence) {
@@ -69,81 +70,120 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       .filter((t) => t.id !== topicId)
       .map((t) => t.id);
 
-    // Retrieve chunks relevant to the question and student answer
-    const query = `${topic.title} ${question.slice(0, 100)} ${studentAnswer.slice(0, 100)}`;
-    let chunks = await searchChunks(supabase, courseId, query, 4);
+    let diagnosis: DiagnosisResponse;
+    let verifiedCitations: { source_id: string; page?: number | null; quote: string; source_filename?: string }[] = [];
 
-    if (chunks.length === 0) {
-      const { data: fallbackChunks } = await supabase
-        .from("source_chunks")
-        .select("id, source_id, course_id, page_number, chunk_index, text")
-        .eq("course_id", courseId)
-        .order("created_at", { ascending: false })
-        .limit(4);
+    if (studyCheck && studyCheck.selectedOption && studyCheck.correctOption) {
+      const isCorrect = studyCheck.selectedOption === studyCheck.correctOption;
+      diagnosis = {
+        assessment: isCorrect ? "correct" : "incorrect",
+        what_seems_correct: isCorrect
+          ? ["Selected the correct principle and conclusion."]
+          : [],
+        possible_gap: {
+          category: isCorrect ? "appears_correct" : "conceptual_misconception",
+          description: isCorrect
+            ? "Sound conceptual understanding demonstrated."
+            : (studyCheck.distractorMisconceptions?.[studyCheck.selectedOption] || "Conceptual misconception identified."),
+        },
+        explanation: isCorrect
+          ? studyCheck.rationale
+          : `${studyCheck.distractorMisconceptions?.[studyCheck.selectedOption] || "Selected a common distractor."} ${studyCheck.rationale}`,
+        next_step: {
+          kind: isCorrect ? "explanation" : "hint",
+          text: isCorrect
+            ? "Concept demonstrated! Ready to advance to the next topic."
+            : "Review the Key Rules and Worked Example in the study guide above.",
+        },
+        belief_simulation: !isCorrect && studyCheck.beliefSimulation ? studyCheck.beliefSimulation : null,
+        prerequisite_topic_id: null,
+        follow_up_question: "How would this conclusion change if boundary values were modified?",
+        citations: Array.isArray(studyCheck.citations) ? studyCheck.citations : [],
+      };
 
-      chunks = fallbackChunks ?? [];
+      verifiedCitations = await validateCitations(
+        supabase,
+        courseId,
+        diagnosis.citations
+      );
+    } else {
+      // Retrieve chunks relevant to the question and student answer
+      const query = `${topic.title} ${question.slice(0, 100)} ${studentAnswer.slice(0, 100)}`;
+      let chunks = await searchChunks(supabase, courseId, query, 4);
+
+      if (chunks.length === 0) {
+        const { data: fallbackChunks } = await supabase
+          .from("source_chunks")
+          .select("id, source_id, course_id, page_number, chunk_index, text")
+          .eq("course_id", courseId)
+          .order("created_at", { ascending: false })
+          .limit(4);
+
+        chunks = fallbackChunks ?? [];
+      }
+
+      const chunkParams = chunks.map((c) => ({
+        source_id: c.source_id,
+        page: c.page_number,
+        text: c.text.slice(0, 800),
+      }));
+
+      const promptText = diagnosisPrompt({
+        topicTitle: topic.title,
+        question,
+        studentAnswer,
+        confidence,
+        chunks: chunkParams,
+        existingTopicIds: otherTopicIds,
+      });
+
+      const rawAiOutput = await chat({
+        messages: [
+          { role: "system", content: SYSTEM_DIRECTIVE },
+          { role: "user", content: promptText },
+        ],
+        jsonHint: JSON.stringify({
+          assessment: "partial",
+          what_seems_correct: ["Identified the core relationship correctly."],
+          possible_gap: {
+            category: "conceptual_misconception",
+            description: "May assume the limit depends on the value at the exact point rather than approaching it.",
+          },
+          explanation: "Based on the course notes, limits describe behavior as x approaches c, not necessarily f(c).",
+          next_step: {
+            kind: "hint",
+            text: "Consider what happens when f(c) is undefined but the limit still exists.",
+          },
+          belief_simulation: {
+            implied_belief: "A limit requires the function to be defined at that specific point.",
+            consequence: "You would conclude (x^2 - 1)/(x - 1) has no limit at x = 1.",
+            why_it_breaks: "Algebraic cancellation shows the limit is 2 even though x = 1 is a hole.",
+          },
+          prerequisite_topic_id: otherTopicIds[0] ?? null,
+          follow_up_question: "What is the limit of (x^2 - 4)/(x - 2) as x approaches 2?",
+          citations: chunkParams.length > 0 ? [
+            {
+              source_id: chunkParams[0].source_id,
+              page: chunkParams[0].page ?? 1,
+              quote: chunkParams[0].text.slice(0, 80).trim(),
+            },
+          ] : [],
+          limitations: [],
+        }),
+        temperature: 0.2,
+      });
+
+      const parsedJson = JSON.parse(rawAiOutput);
+      diagnosis = DiagnosisResponseSchema.parse(parsedJson);
+
+      // Validate citations against stored Postgres chunks (BUILD.md §2.4)
+      verifiedCitations = await validateCitations(
+        supabase,
+        courseId,
+        diagnosis.citations
+      );
     }
 
-    const chunkParams = chunks.map((c) => ({
-      source_id: c.source_id,
-      page: c.page_number,
-      text: c.text.slice(0, 800),
-    }));
-
-    const promptText = diagnosisPrompt({
-      topicTitle: topic.title,
-      question,
-      studentAnswer,
-      confidence,
-      chunks: chunkParams,
-      existingTopicIds: otherTopicIds,
-    });
-
-    const rawAiOutput = await chat({
-      messages: [
-        { role: "system", content: SYSTEM_DIRECTIVE },
-        { role: "user", content: promptText },
-      ],
-      jsonHint: JSON.stringify({
-        assessment: "partial",
-        what_seems_correct: ["Identified the core relationship correctly."],
-        possible_gap: {
-          category: "conceptual_misconception",
-          description: "May assume the limit depends on the value at the exact point rather than approaching it.",
-        },
-        explanation: "Based on the course notes, limits describe behavior as x approaches c, not necessarily f(c).",
-        next_step: {
-          kind: "hint",
-          text: "Consider what happens when f(c) is undefined but the limit still exists.",
-        },
-        belief_simulation: {
-          implied_belief: "A limit requires the function to be defined at that specific point.",
-          consequence: "You would conclude (x^2 - 1)/(x - 1) has no limit at x = 1.",
-          why_it_breaks: "Algebraic cancellation shows the limit is 2 even though x = 1 is a hole.",
-        },
-        prerequisite_topic_id: otherTopicIds[0] ?? null,
-        follow_up_question: "What is the limit of (x^2 - 4)/(x - 2) as x approaches 2?",
-        citations: chunkParams.length > 0 ? [
-          {
-            source_id: chunkParams[0].source_id,
-            page: chunkParams[0].page ?? 1,
-            quote: chunkParams[0].text.slice(0, 80).trim(),
-          },
-        ] : [],
-        limitations: [],
-      }),
-      temperature: 0.2,
-    });
-
-    const parsedJson = JSON.parse(rawAiOutput);
-    const diagnosis: DiagnosisResponse = DiagnosisResponseSchema.parse(parsedJson);
-
-    // Validate citations against stored Postgres chunks (BUILD.md §2.4)
-    const verifiedCitations = await validateCitations(
-      supabase,
-      courseId,
-      diagnosis.citations
-    );
 
     // Belief simulation rule (BUILD.md §2.5):
     // Only show implied_belief -> consequence -> why_it_breaks for conceptual_misconception

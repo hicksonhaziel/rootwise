@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
@@ -11,6 +11,7 @@ import { DiagnosticSession } from "@/components/learning/diagnostic-session";
 import { ExamTab } from "@/components/learning/exam-tab";
 import { FixTundeTab } from "@/components/learning/fix-tunde-tab";
 import { RoomTab } from "@/components/course/room-tab";
+import { cachedFetch } from "@/lib/cache";
 import {
   ArrowLeft,
   BookOpen,
@@ -23,6 +24,8 @@ import {
   Target,
   ShareNetwork,
   CalendarBlank,
+  Sparkle,
+  TreeStructure,
 } from "@phosphor-icons/react";
 
 interface Course {
@@ -190,9 +193,26 @@ function OverviewTab({
   onNavigate,
 }: {
   course: Course;
-  onNavigate: (tab: Tab) => void;
+  onNavigate: (tab: Tab, topicId?: string) => void;
 }) {
+  const [topics, setTopics] = useState<
+    { id: string; title: string; status?: string; confident_error?: boolean }[]
+  >([]);
   const [examDate, setExamDate] = useState("2026-11-15");
+
+  useEffect(() => {
+    async function loadTopics() {
+      try {
+        const data = await cachedFetch<{
+          topics: { id: string; title: string; status?: string; confident_error?: boolean }[];
+        }>(`/api/courses/${course.id}/topics`);
+        setTopics(data.topics || []);
+      } catch (err) {
+        console.error("Failed to load topics for overview", err);
+      }
+    }
+    loadTopics();
+  }, [course.id]);
 
   const daysToExam = Math.max(
     0,
@@ -205,30 +225,153 @@ function OverviewTab({
     `Studying for ${course.course_code || course.title} with Rootwise! Check out the misconception finder here.`
   )}`;
 
+  const totalTopics = topics.length;
+  const demonstratedCount = topics.filter((t) => t.status === "demonstrated").length;
+  const developingCount = topics.filter((t) => t.status === "developing").length;
+  const needsWorkCount = topics.filter((t) => t.status === "needs_work").length;
+  const knotsCount = topics.filter((t) => t.confident_error).length;
+  const masteryPercentage =
+    totalTopics > 0 ? Math.round((demonstratedCount / totalTopics) * 100) : 0;
+
+  // Next recommended topic: knots first, then needs_work, then not_started
+  const priorityTopic =
+    topics.find((t) => t.confident_error) ||
+    topics.find((t) => t.status === "needs_work") ||
+    topics.find((t) => !t.status || t.status === "not_started") ||
+    topics[0];
+
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Course Banner */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          {course.course_code && (
-            <span className="text-xs font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
-              {course.course_code}
-            </span>
-          )}
-          <span className="text-xs text-text-tertiary font-mono">
-            Created {new Date(course.created_at).toLocaleDateString()}
-          </span>
+      {/* Course Banner & Syllabus Mastery Bar */}
+      <div className="card p-6 border-bg-border bg-gradient-to-b from-bg-surface to-bg-elevated/40 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              {course.course_code && (
+                <span className="text-xs font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
+                  {course.course_code}
+                </span>
+              )}
+              <span className="text-xs text-text-tertiary font-mono">
+                Created {new Date(course.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <h2 className="text-xl font-bold text-text-primary">{course.title}</h2>
+          </div>
+
+          <div className="text-left sm:text-right">
+            <p className="text-2xl font-bold font-mono text-lime-700 dark:text-lime-300">
+              {masteryPercentage}%
+            </p>
+            <p className="text-[11px] text-text-tertiary font-mono uppercase tracking-wider">
+              Syllabus Demonstrated
+            </p>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold text-text-primary">
-          {course.title}
-        </h2>
-        <p className="text-xs text-text-secondary mt-1">
-          Rootwise analyzes your lecture materials, pinpoints underlying conceptual gaps, and calibrates confidence to prepare you for university exams.
-        </p>
+
+        {/* Progress bar */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs text-text-tertiary font-mono">
+            <span>Course Readiness</span>
+            <span>
+              {demonstratedCount} of {totalTopics} Topics Mastered
+            </span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-bg-base overflow-hidden border border-bg-border">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${masteryPercentage}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="h-full bg-lime-400 rounded-full"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Small Wins: Exam Countdown & Fix First Target (BUILD.md §3.6) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Recommended Next Masterclass Card */}
+      {priorityTopic && (
+        <div className="card p-5 border-lime-500/30 bg-lime-500/5 dark:bg-lime-300/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-lime-700 dark:text-lime-300 text-xs font-semibold">
+              <Sparkle size={15} weight="fill" />
+              <span>Recommended Next Masterclass</span>
+              {priorityTopic.confident_error && (
+                <span className="text-[10px] font-mono text-status-wrong bg-status-wrong/10 border border-status-wrong/20 px-1.5 py-0.2 rounded">
+                  Knot to Clear
+                </span>
+              )}
+            </div>
+            <h3 className="text-base font-semibold text-text-primary">
+              {priorityTopic.title}
+            </h3>
+            <p className="text-xs text-text-secondary">
+              Deep dive into this concept with formulas, intuition, worked examples, and misconception checks.
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigate("learn", priorityTopic.id)}
+            className="btn-primary px-4 py-2 text-xs font-semibold flex items-center gap-2 shrink-0 self-start sm:self-center"
+          >
+            <span>Study Topic Guide</span>
+            <ArrowRight size={14} weight="bold" />
+          </button>
+        </div>
+      )}
+
+      {/* Knowledge Status Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div
+          onClick={() => onNavigate("topics")}
+          className="card p-4 border-bg-border bg-bg-surface hover:border-lime-500/40 cursor-pointer transition-all space-y-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-text-secondary">Demonstrated</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-lime-400" />
+          </div>
+          <p className="text-2xl font-bold font-mono text-text-primary">{demonstratedCount}</p>
+          <p className="text-[10px] text-text-tertiary">Verified mastery</p>
+        </div>
+
+        <div
+          onClick={() => onNavigate("topics")}
+          className="card p-4 border-bg-border bg-bg-surface hover:border-blue-500/40 cursor-pointer transition-all space-y-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-text-secondary">Developing</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+          </div>
+          <p className="text-2xl font-bold font-mono text-text-primary">{developingCount}</p>
+          <p className="text-[10px] text-text-tertiary">Partial understanding</p>
+        </div>
+
+        <div
+          onClick={() => onNavigate("topics")}
+          className="card p-4 border-bg-border bg-bg-surface hover:border-amber-500/40 cursor-pointer transition-all space-y-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-text-secondary">Needs Work</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+          </div>
+          <p className="text-2xl font-bold font-mono text-text-primary">{needsWorkCount}</p>
+          <p className="text-[10px] text-text-tertiary">Gaps identified</p>
+        </div>
+
+        <div
+          onClick={() => onNavigate("topics")}
+          className="card p-4 border-bg-border bg-bg-surface hover:border-red-500/40 cursor-pointer transition-all space-y-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-text-secondary">Confident Knots</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-red-400 ring-2 ring-red-400/20" />
+          </div>
+          <p className="text-2xl font-bold font-mono text-status-wrong">{knotsCount}</p>
+          <p className="text-[10px] text-text-tertiary">Wrong + Sure</p>
+        </div>
+      </div>
+
+      {/* Target Date & WhatsApp Study Group */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Exam Countdown Card */}
         <div className="card p-5 border-bg-border bg-bg-surface space-y-2">
           <div className="flex items-center justify-between text-xs text-text-tertiary font-mono">
@@ -245,74 +388,66 @@ function OverviewTab({
           </div>
           <div className="pt-1">
             <p className="text-2xl font-bold font-mono text-text-primary">
-              {daysToExam} <span className="text-xs font-normal text-text-tertiary">days left</span>
+              {daysToExam} <span className="text-xs font-normal text-text-tertiary">days remaining</span>
             </p>
             <p className="text-[11px] text-text-secondary mt-1">
-              Time to calibrate high-confidence errors before exam day.
+              Calibrate high-confidence misconceptions before exam day.
             </p>
           </div>
         </div>
 
-        {/* Fix First Priority */}
-        <div
-          onClick={() => onNavigate("topics")}
-          className="card p-5 border-bg-border bg-bg-surface space-y-2 cursor-pointer hover:border-lime-500/30 transition-all group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-lime-700 dark:text-lime-300 uppercase">
-              Fix First Priority
-            </span>
-            <ArrowRight size={13} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
-          </div>
-          <p className="text-xs font-medium text-text-primary">
-            Clear Confident-Wrong Knots
-          </p>
-          <p className="text-[11px] text-text-tertiary">
-            Prioritize topics where you chose &quot;Sure&quot; on an incorrect diagnosis.
-          </p>
-        </div>
-
-        {/* Anonymous WhatsApp Challenge (BUILD.md §3.6) */}
+        {/* WhatsApp Share Card */}
         <div className="card p-5 border-bg-border bg-bg-surface space-y-2 flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-mono text-[#25D366] uppercase flex items-center gap-1">
               <ShareNetwork size={13} />
-              <span>WhatsApp Share</span>
+              <span>Study Group Hub</span>
             </span>
             <p className="text-xs font-medium text-text-primary mt-1">
-              Challenge Study Group
+              Invite Classmates to Diagnostic Room
             </p>
             <p className="text-[11px] text-text-tertiary">
-              Invite coursemates to an anonymous diagnostic room.
+              Host an anonymous diagnostic poll to see where your study group gets stuck.
             </p>
           </div>
-          <a
-            href={waShareUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary py-1.5 px-3 text-[11px] flex items-center justify-center gap-1.5 hover:text-[#25D366]"
-          >
-            <ShareNetwork size={13} />
-            <span>Share via WhatsApp</span>
-          </a>
+          <div className="flex items-center gap-2 pt-2">
+            <a
+              href={waShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary py-1.5 px-3 text-[11px] flex items-center justify-center gap-1.5 hover:text-[#25D366] flex-1"
+            >
+              <ShareNetwork size={13} />
+              <span>Share via WhatsApp</span>
+            </a>
+            <button
+              onClick={() => onNavigate("room")}
+              className="btn-primary py-1.5 px-3 text-[11px] font-semibold flex items-center justify-center gap-1"
+            >
+              <span>Judges&apos; Room</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Feature Navigation Cards */}
+      {/* Feature Hub Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
-          onClick={() => onNavigate("materials")}
+          onClick={() => onNavigate("learn")}
           className="card p-5 cursor-pointer hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-all group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300">Phase 1</span>
+            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300 flex items-center gap-1">
+              <Brain size={13} />
+              <span>Interactive Learn</span>
+            </span>
             <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
-            Lecture Materials & Chunks
+          <h3 className="text-sm font-semibold text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
+            Topic Masterclass & Study Guide
           </h3>
           <p className="text-xs text-text-tertiary mt-1">
-            Drop course PDFs or paste notes. Text is extracted, chunked, and indexed for Postgres FTS retrieval.
+            Structured full-page study guides with core intuition, key rules, common traps, and instant multiple-choice checks.
           </p>
         </div>
 
@@ -321,14 +456,17 @@ function OverviewTab({
           className="card p-5 cursor-pointer hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-all group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300">Phase 3</span>
+            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300 flex items-center gap-1">
+              <TreeStructure size={13} />
+              <span>3D Knowledge Map</span>
+            </span>
             <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
+          <h3 className="text-sm font-semibold text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
             Topic Map & 3D Living Root Tree
           </h3>
           <p className="text-xs text-text-tertiary mt-1">
-            Visualize your knowledge canopy and prerequisite roots in Three.js. Inspect attempt logs and status rationale.
+            Explore syllabus branches and prerequisite foundation roots rendered in 3D Three.js.
           </p>
         </div>
 
@@ -337,30 +475,36 @@ function OverviewTab({
           className="card p-5 cursor-pointer hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-all group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300">Phase 3</span>
+            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300 flex items-center gap-1">
+              <Exam size={13} />
+              <span>Exam Simulation</span>
+            </span>
             <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
+          <h3 className="text-sm font-semibold text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
             5-Question Mock Exam
           </h3>
           <p className="text-xs text-text-tertiary mt-1">
-            Test under real exam conditions with no hints, followed by cited note evidence and weak-topic links.
+            Multiple-choice questions with confidence tap, followed by cited note evidence and weak-topic priority links.
           </p>
         </div>
 
         <div
-          onClick={() => onNavigate("tunde")}
+          onClick={() => onNavigate("materials")}
           className="card p-5 cursor-pointer hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-all group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300">Phase 3</span>
+            <span className="text-[11px] font-mono font-semibold text-lime-700 dark:text-lime-300 flex items-center gap-1">
+              <FileText size={13} />
+              <span>Course Sources</span>
+            </span>
             <ArrowRight size={14} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h3 className="text-sm font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
-            Fix Tunde Peer Challenge
+          <h3 className="text-sm font-semibold text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
+            In-App Document Viewer
           </h3>
           <p className="text-xs text-text-tertiary mt-1">
-            Find the planted misconception in your classmate&apos;s answer and correct his reasoning against the AI evaluator.
+            Upload PDFs, Word (.docx) files, and photo notes. Preview documents directly inside Rootwise.
           </p>
         </div>
       </div>

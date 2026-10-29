@@ -11,6 +11,8 @@
  */
 
 import { extractText, getDocumentProxy } from "unpdf";
+import mammoth from "mammoth";
+import { aiClient } from "@/lib/ai/provider";
 
 export interface ExtractedPage {
   pageNumber: number;
@@ -126,4 +128,87 @@ function normalisePageText(raw: string): string {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/**
+ * Extract text from a Word document (.docx) buffer using mammoth.
+ */
+export async function extractDocxText(buffer: Buffer): Promise<ExtractionResult> {
+  const result = await mammoth.extractRawText({ buffer });
+  const rawText = normalisePageText(result.value || "");
+
+  if (!rawText || rawText.length < MIN_CHARS_PER_PAGE) {
+    return { pages: [], totalPages: 0, isScanned: false };
+  }
+
+  // Partition into logical ~2000 character pages
+  const paragraphs = rawText.split(/\n{2,}/);
+  const pages: ExtractedPage[] = [];
+  let currentPage = "";
+  let pageNum = 1;
+
+  for (const para of paragraphs) {
+    if (currentPage.length + para.length > 2000 && currentPage.length > 0) {
+      pages.push({ pageNumber: pageNum++, text: currentPage.trim() });
+      currentPage = para;
+    } else {
+      currentPage = currentPage ? currentPage + "\n\n" + para : para;
+    }
+  }
+
+  if (currentPage.trim().length > 0) {
+    pages.push({ pageNumber: pageNum, text: currentPage.trim() });
+  }
+
+  return {
+    pages,
+    totalPages: pages.length,
+    isScanned: false,
+  };
+}
+
+/**
+ * Transcribe lecture image / photo notes into text using Groq Vision (llama-3.2-11b-vision-preview).
+ */
+export async function extractImageText(buffer: Buffer, mimeType: string): Promise<ExtractionResult> {
+  const base64 = buffer.toString("base64");
+  const effectiveMime = mimeType || "image/jpeg";
+
+  try {
+    const response = await aiClient.chat.completions.create({
+      model: "llama-3.2-11b-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "You are an expert OCR transcription engine for university lecture materials. Transcribe all text, formulas, math notations, diagram captions, definitions, and handwritten notes from this image accurately and verbatim. Maintain logical layout.",
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${effectiveMime};base64,${base64}`,
+              },
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+    });
+
+    const ocrText = normalisePageText(response.choices[0]?.message?.content || "");
+    return {
+      pages: ocrText.length > 0 ? [{ pageNumber: 1, text: ocrText }] : [],
+      totalPages: 1,
+      isScanned: false,
+    };
+  } catch (err) {
+    console.warn("[ocr/vision] Vision model transcription error, fallback:", err);
+    return {
+      pages: [],
+      totalPages: 1,
+      isScanned: true,
+    };
+  }
 }

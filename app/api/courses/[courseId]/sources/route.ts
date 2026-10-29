@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
-import { extractPdfText, chunkPages } from "@/lib/pdf/extract";
+import { extractPdfText, extractDocxText, extractImageText, chunkPages } from "@/lib/pdf/extract";
 
 interface RouteParams {
   params: Promise<{ courseId: string }>;
@@ -9,6 +9,7 @@ interface RouteParams {
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { courseId } = await params;
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
 
   const {
     data: { user },
@@ -56,12 +57,29 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
   }
 
-  const sourcesWithCount = (sources ?? []).map((s) => ({
-    ...s,
-    chunk_count: chunkCountMap[s.id] || 0,
-  }));
+  // Generate signed preview URLs for in-app viewing (valid for 24h)
+  const sourcesWithSignedUrls = await Promise.all(
+    (sources ?? []).map(async (s) => {
+      let previewUrl: string | null = null;
+      if (s.storage_path && s.storage_path !== "unindexed/scanned") {
+        try {
+          const { data: signed } = await serviceClient.storage
+            .from("sources")
+            .createSignedUrl(s.storage_path, 86400);
+          previewUrl = signed?.signedUrl ?? null;
+        } catch {
+          // ignore signed url error
+        }
+      }
+      return {
+        ...s,
+        chunk_count: chunkCountMap[s.id] || 0,
+        preview_url: previewUrl,
+      };
+    })
+  );
 
-  return NextResponse.json({ sources: sourcesWithCount });
+  return NextResponse.json({ sources: sourcesWithSignedUrls });
 }
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
@@ -80,7 +98,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const contentType = req.headers.get("content-type") || "";
 
   // ---------------------------------------------------------------------------
-  // 1. PDF File Upload
+  // 1. Multi-Format File Upload (PDF, Word DOCX, Photos/Images)
   // ---------------------------------------------------------------------------
   if (contentType.includes("multipart/form-data")) {
     try {
@@ -91,19 +109,48 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "No file provided" }, { status: 400 });
       }
 
-      if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+      const lowerName = file.name.toLowerCase();
+      const isPdf = lowerName.endsWith(".pdf") || file.type === "application/pdf";
+      const isDocx = lowerName.endsWith(".docx") || file.type.includes("wordprocessingml") || file.type.includes("document");
+      const isImage = /\.(png|jpe?g|webp)$/i.test(lowerName) || file.type.startsWith("image/");
+
+      if (!isPdf && !isDocx && !isImage) {
         return NextResponse.json(
-          { error: "Only PDF documents are supported for upload." },
+          { error: "Supported document types: PDF (.pdf), Word (.docx), and Photos/Images (.png, .jpg, .jpeg, .webp)." },
           { status: 400 }
         );
       }
 
       const rawArrayBuffer = await file.arrayBuffer();
       const fileBuffer = Buffer.from(rawArrayBuffer);
-      const { pages, totalPages, isScanned } = await extractPdfText(rawArrayBuffer.slice(0));
+
+      let pages: { pageNumber: number; text: string }[] = [];
+      let totalPages = 1;
+      let isScanned = false;
+      let effectiveMime = file.type || "application/octet-stream";
+
+      if (isPdf) {
+        effectiveMime = "application/pdf";
+        const pdfRes = await extractPdfText(rawArrayBuffer.slice(0));
+        pages = pdfRes.pages;
+        totalPages = pdfRes.totalPages;
+        isScanned = pdfRes.isScanned;
+      } else if (isDocx) {
+        effectiveMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        const docxRes = await extractDocxText(fileBuffer);
+        pages = docxRes.pages;
+        totalPages = docxRes.totalPages;
+        isScanned = docxRes.isScanned;
+      } else if (isImage) {
+        effectiveMime = file.type || (lowerName.endsWith(".png") ? "image/png" : "image/jpeg");
+        const imgRes = await extractImageText(fileBuffer, effectiveMime);
+        pages = imgRes.pages;
+        totalPages = imgRes.totalPages;
+        isScanned = imgRes.isScanned;
+      }
 
       // Scanned PDF detection (BUILD.md §1.2 check)
-      if (isScanned) {
+      if (isScanned && isPdf) {
         // Record scanned document in DB with error message
         const { data: scannedSource } = await serviceClient
           .from("sources")
@@ -111,7 +158,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             course_id: courseId,
             uploaded_by: user.id,
             filename: file.name,
-            mime_type: "application/pdf",
+            mime_type: effectiveMime,
             storage_path: "unindexed/scanned",
             processing_status: "scanned",
             processing_error: "This looks scanned. Rootwise needs a text PDF",
@@ -138,7 +185,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       const { error: uploadError } = await serviceClient.storage
         .from("sources")
         .upload(storagePath, fileBuffer, {
-          contentType: "application/pdf",
+          contentType: effectiveMime,
           upsert: true,
         });
 
@@ -153,7 +200,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             await serviceClient.storage
               .from("sources")
               .upload(storagePath, fileBuffer, {
-                contentType: "application/pdf",
+                contentType: effectiveMime,
                 upsert: true,
               });
           } catch (createErr) {
@@ -169,7 +216,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           course_id: courseId,
           uploaded_by: user.id,
           filename: file.name,
-          mime_type: "application/pdf",
+          mime_type: effectiveMime,
           storage_path: storagePath,
           processing_status: "ready",
           page_count: totalPages,
@@ -205,11 +252,22 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         }
       }
 
+      let previewUrl: string | null = null;
+      try {
+        const { data: signed } = await serviceClient.storage
+          .from("sources")
+          .createSignedUrl(storagePath, 86400);
+        previewUrl = signed?.signedUrl ?? null;
+      } catch {
+        // ignore
+      }
+
       return NextResponse.json(
         {
           source: {
             ...source,
             chunk_count: chunks.length,
+            preview_url: previewUrl,
           },
         },
         { status: 201 }
@@ -217,7 +275,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     } catch (err) {
       console.error("[sources/upload] Unexpected error:", err);
       return NextResponse.json(
-        { error: "Failed to process PDF document" },
+        { error: "Failed to process document" },
         { status: 500 }
       );
     }

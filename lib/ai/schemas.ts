@@ -42,9 +42,11 @@ export const RawCitationSchema = z.object({
   source_id: z.string().uuid("Citation source_id must be a valid UUID"),
   page: z.number().int().nullable().optional(),
   quote: z.string().min(5, "Quote too short to be meaningful"),
+  source_filename: z.string().optional(),
 });
 
 export type RawCitation = z.infer<typeof RawCitationSchema>;
+
 
 // ---------------------------------------------------------------------------
 // Belief simulation (§5.4 S2 — only for misconception/partially_correct)
@@ -138,3 +140,66 @@ export const FixTundeResponseSchema = z.object({
 });
 
 export type FixTundeResponse = z.infer<typeof FixTundeResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Topic Masterclass & Study Guide schema
+// ---------------------------------------------------------------------------
+
+export const StudyGuideSchema = z.object({
+  core_concept: z.string().min(20),
+  key_rules: z.array(z.string()).min(1),
+  pitfalls: z.array(z.string()).min(1),
+  worked_example: z.object({
+    problem: z.string().min(10),
+    solution_steps: z.array(z.string()).min(1),
+    key_takeaway: z.string(),
+  }),
+  diagnostic_check: z.object({
+    question: z.string().min(10),
+    options: z
+      .array(
+        z.object({
+          key: z.enum(["A", "B", "C", "D"]),
+          text: z.string().min(1),
+        })
+      )
+      .length(4),
+    correct_option: z.enum(["A", "B", "C", "D"]),
+    distractor_misconceptions: z.record(z.enum(["A", "B", "C", "D"]), z.string()),
+    rationale: z.string(),
+    belief_simulation: BeliefSimulationSchema.nullable().optional(),
+    citations: z.array(RawCitationSchema).default([]),
+  }),
+});
+
+export type StudyGuide = z.infer<typeof StudyGuideSchema>;
+
+// ---------------------------------------------------------------------------
+// Exam Multiple-Choice schema
+// ---------------------------------------------------------------------------
+
+export const ExamMultipleChoiceQuestionSchema = z.object({
+  id: z.union([z.number(), z.string()]),
+  topic_id: z.string(),
+  topic_title: z.string(),
+  question: z.string().min(10),
+  options: z
+    .array(
+      z.object({
+        key: z.enum(["A", "B", "C", "D"]),
+        text: z.string().min(1),
+      })
+    )
+    .length(4),
+  correct_option: z.enum(["A", "B", "C", "D"]),
+  rationale: z.string(),
+  citations: z.array(RawCitationSchema).default([]),
+});
+
+export const ExamSetSchema = z.object({
+  questions: z.array(ExamMultipleChoiceQuestionSchema).min(1).max(10),
+});
+
+export type ExamMultipleChoiceQuestion = z.infer<typeof ExamMultipleChoiceQuestionSchema>;
+export type ExamSet = z.infer<typeof ExamSetSchema>;
+

@@ -12,6 +12,8 @@ import {
   Eye,
   X,
   Article,
+  Image as ImageIcon,
+  ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { cachedFetch, cacheInvalidate } from "@/lib/cache";
 
@@ -24,14 +26,7 @@ interface Source {
   processing_error: string | null;
   page_count: number | null;
   chunk_count?: number;
-  created_at: string;
-}
-
-interface Chunk {
-  id: string;
-  page_number: number | null;
-  chunk_index: number;
-  text: string;
+  preview_url?: string | null;
   created_at: string;
 }
 
@@ -54,10 +49,8 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
   const [pastedText, setPastedText] = useState("");
   const [pasting, setPasting] = useState(false);
 
-  // Chunk inspection modal
-  const [inspectSource, setInspectSource] = useState<Source | null>(null);
-  const [chunks, setChunks] = useState<Chunk[]>([]);
-  const [chunksLoading, setChunksLoading] = useState(false);
+  // In-App Document Preview Modal
+  const [previewSource, setPreviewSource] = useState<Source | null>(null);
 
   // Topic generation status
   const [generatingTopics, setGeneratingTopics] = useState(false);
@@ -65,35 +58,39 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchSources = useCallback(async (force = false) => {
-    try {
-      setLoading(true);
-      if (force) {
-        cacheInvalidate(`/api/courses/${courseId}/sources`);
+  const fetchSources = useCallback(
+    async (force = false) => {
+      try {
+        setLoading(true);
+        if (force) {
+          cacheInvalidate(`/api/courses/${courseId}/sources`);
+        }
+        const data = await cachedFetch<{ sources: Source[] }>(
+          `/api/courses/${courseId}/sources`
+        );
+        setSources(data.sources ?? []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      const data = await cachedFetch<{ sources: Source[] }>(`/api/courses/${courseId}/sources`);
-      setSources(data.sources ?? []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId]);
+    },
+    [courseId]
+  );
 
   useEffect(() => {
     fetchSources();
   }, [fetchSources]);
 
   async function handleFileUpload(file: File) {
-    if (!file) return;
     setUploading(true);
-    setScannedWarning(null);
     setUploadError(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
+    setScannedWarning(null);
 
     try {
+      const formData = new FormData();
+      formData.append("file", file);
+
       const res = await fetch(`/api/courses/${courseId}/sources`, {
         method: "POST",
         body: formData,
@@ -103,7 +100,9 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
 
       if (!res.ok) {
         if (data.isScanned) {
-          setScannedWarning(data.error || "This looks scanned. Rootwise needs a text PDF");
+          setScannedWarning(
+            data.error || "This looks scanned. Rootwise needs a text PDF or photo."
+          );
           await fetchSources(true);
           return;
         }
@@ -152,91 +151,94 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
     }
   }
 
-  async function handleInspectChunks(source: Source) {
-    setInspectSource(source);
-    setChunksLoading(true);
-    try {
-      const data = await cachedFetch<{ chunks: Chunk[] }>(`/api/sources/${source.id}/chunks`);
-      setChunks(data.chunks ?? []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setChunksLoading(false);
-    }
-  }
-
   async function handleGenerateTopics() {
     setGeneratingTopics(true);
     setTopicsSuccessMsg(null);
-    setUploadError(null);
-
     try {
       const res = await fetch(`/api/courses/${courseId}/topics/generate`, {
         method: "POST",
       });
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error || "Failed to generate topics");
 
       setTopicsSuccessMsg(
-        `Generated ${data.topics?.length ?? 0} topics successfully!`
+        `Generated ${data.topics?.length ?? 0} topics from your course materials!`
       );
-      if (onNavigateToTopics) {
-        setTimeout(onNavigateToTopics, 1000);
-      }
+      cacheInvalidate(`/api/courses/${courseId}/topics`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to generate topics";
+      const msg = err instanceof Error ? err.message : "Error generating topics";
       setUploadError(msg);
     } finally {
       setGeneratingTopics(false);
     }
   }
 
-  const hasReadySources = sources.some((s) => s.processing_status === "ready");
+  function getFileIcon(filename: string, mime: string) {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith(".pdf") || mime === "application/pdf") {
+      return <FileText size={18} className="text-red-400" />;
+    }
+    if (lower.endsWith(".docx") || mime.includes("wordprocessingml")) {
+      return <Article size={18} className="text-blue-400" />;
+    }
+    if (/\.(png|jpe?g|webp)$/i.test(lower) || mime.startsWith("image/")) {
+      return <ImageIcon size={18} className="text-amber-400" />;
+    }
+    return <FileText size={18} className="text-text-tertiary" />;
+  }
+
+  function getFormatBadge(filename: string, mime: string) {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith(".pdf") || mime === "application/pdf") {
+      return <span className="text-[10px] font-mono font-medium text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-400/20">PDF</span>;
+    }
+    if (lower.endsWith(".docx") || mime.includes("wordprocessingml")) {
+      return <span className="text-[10px] font-mono font-medium text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20">DOCX</span>;
+    }
+    if (/\.(png|jpe?g|webp)$/i.test(lower) || mime.startsWith("image/")) {
+      return <span className="text-[10px] font-mono font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">PHOTO OCR</span>;
+    }
+    return <span className="text-[10px] font-mono font-medium text-zinc-400 bg-zinc-400/10 px-2 py-0.5 rounded border border-zinc-400/20">TEXT</span>;
+  }
+
+  const isPdf = previewSource ? previewSource.filename.toLowerCase().endsWith(".pdf") || previewSource.mime_type === "application/pdf" : false;
+  const isImage = previewSource ? /\.(png|jpe?g|webp)$/i.test(previewSource.filename) || previewSource.mime_type.startsWith("image/") : false;
 
   return (
-    <div className="space-y-6">
-      {/* Header with actions */}
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">
-            Course Materials
+          <h2 className="text-base font-semibold text-text-primary">
+            Course Materials & Uploads
           </h2>
           <p className="text-xs text-text-secondary mt-0.5">
-            Upload text-based PDFs or paste notes. Rootwise extracts passages and creates study chunks.
+            Upload PDFs, Word (.docx) documents, or photos of lecture notes and slides. Text is extracted and indexed for retrieval.
           </p>
         </div>
 
+        {/* Action buttons */}
         <div className="flex items-center gap-2">
-          {hasReadySources && (
-            <motion.button
+          {sources.length > 0 && (
+            <button
               onClick={handleGenerateTopics}
-              disabled={generatingTopics || uploading}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded-md hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              disabled={generatingTopics}
+              className="btn-primary text-xs flex items-center gap-1.5"
             >
               {generatingTopics ? (
-                <>
-                  <SpinnerGap size={14} className="animate-spin" />
-                  Analyzing material…
-                </>
+                <SpinnerGap size={14} className="animate-spin" />
               ) : (
-                <>
-                  <Sparkle size={14} weight="fill" />
-                  Generate AI Topics
-                </>
+                <Sparkle size={14} />
               )}
-            </motion.button>
+              <span>{generatingTopics ? "Analyzing Outline…" : "Generate Topics"}</span>
+            </button>
           )}
 
           <button
             onClick={() => setShowPasteMode(!showPasteMode)}
-            disabled={uploading || generatingTopics}
-            className="flex items-center gap-1.5 px-3 py-2 bg-bg-surface border border-bg-border text-text-secondary hover:text-text-primary text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-secondary text-xs"
           >
-            <Article size={14} />
-            {showPasteMode ? "Upload PDF" : "Paste Notes"}
+            {showPasteMode ? "Upload File instead" : "Paste Notes text"}
           </button>
         </div>
       </div>
@@ -288,7 +290,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
         </motion.div>
       )}
 
-      {/* Mode 1: PDF Dropzone */}
+      {/* Mode 1: Multi-Format Dropzone */}
       {!showPasteMode ? (
         <div
           onDragOver={(e) => {
@@ -316,7 +318,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,application/pdf"
+            accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -325,19 +327,21 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
           />
 
           <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
-            <div className="w-10 h-10 rounded-full bg-bg-elevated border border-bg-border flex items-center justify-center text-lime-700 dark:text-lime-300">
+            <div className="w-12 h-12 rounded-full bg-bg-elevated border border-bg-border flex items-center justify-center text-lime-700 dark:text-lime-300">
               {uploading ? (
-                <SpinnerGap size={20} className="animate-spin" />
+                <SpinnerGap size={24} className="animate-spin" />
               ) : (
-                <FileArrowUp size={20} />
+                <FileArrowUp size={24} />
               )}
             </div>
 
             <p className="text-sm font-medium text-text-primary">
-              {uploading ? "Extracting & indexing document…" : "Drop course PDF here or click to browse"}
+              {uploading
+                ? "Extracting & indexing document text…"
+                : "Drop course files here or click to browse"}
             </p>
             <p className="text-xs text-text-tertiary">
-              Text PDFs only (no scans). Lecture notes, syllabus, or past papers.
+              Supports <strong>PDF</strong>, Word <strong>.docx</strong>, and <strong>Photo/Slide OCR</strong> (.png, .jpg).
             </p>
           </div>
         </div>
@@ -348,145 +352,105 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
             <h3 className="text-sm font-medium text-text-primary">
               Paste Lecture or Textbook Excerpt
             </h3>
-            <button
-              type="button"
-              disabled={pasting}
-              onClick={() => setShowPasteMode(false)}
-              className="text-text-tertiary hover:text-text-secondary disabled:opacity-50"
-            >
-              <X size={16} />
-            </button>
+            <span className="text-[11px] text-text-tertiary font-mono">
+              Min 30 characters
+            </span>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-text-tertiary uppercase tracking-wider">
-              Document Label
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-text-secondary">Section Title</label>
             <input
               type="text"
-              disabled={pasting}
-              placeholder="e.g. Chapter 1: Calculus Limits"
+              placeholder="e.g. Chapter 3: Eigenvalues & Vector Spaces"
               value={pastedTitle}
               onChange={(e) => setPastedTitle(e.target.value)}
-              className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300 disabled:opacity-50"
+              className="input w-full text-xs"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-text-tertiary uppercase tracking-wider">
-              Content *
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-text-secondary">Notes Content</label>
             <textarea
-              rows={6}
-              required
-              disabled={pasting}
-              placeholder="Paste notes, theorems, formulas, or lecture transcripts here…"
+              rows={8}
+              placeholder="Paste notes, definitions, theorem statements, or past paper questions here..."
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
-              className="w-full bg-bg-elevated border border-bg-border rounded p-3 text-xs text-text-primary font-mono outline-none focus:border-lime-300 resize-y disabled:opacity-50"
+              className="input w-full text-xs font-mono"
             />
           </div>
 
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              disabled={pasting}
               onClick={() => setShowPasteMode(false)}
-              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-50"
+              className="btn-secondary text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pasting || pastedText.trim().length < 30}
-              className="px-4 py-1.5 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="btn-primary text-xs flex items-center gap-1.5"
             >
-              {pasting ? "Chunking notes…" : "Save & Index Notes"}
+              {pasting ? <SpinnerGap size={14} className="animate-spin" /> : null}
+              <span>{pasting ? "Indexing Notes…" : "Save & Index Notes"}</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* Sources list */}
+      {/* Materials List */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-          Uploaded Materials ({sources.length})
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-text-primary uppercase tracking-wider font-mono">
+            Indexed Course Documents ({sources.length})
+          </h3>
+        </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-text-tertiary">
-            Loading materials…
+          <div className="card p-8 text-center text-xs text-text-tertiary">
+            Loading course materials…
           </div>
         ) : sources.length === 0 ? (
-          <div className="card p-8 text-center">
-            <FileText size={28} className="mx-auto text-text-tertiary mb-2" />
-            <p className="text-xs text-text-secondary font-medium">No materials uploaded yet</p>
-            <p className="text-[11px] text-text-tertiary mt-1">
-              Upload course PDFs above to start diagnosing misconceptions.
-            </p>
+          <div className="card p-8 text-center text-xs text-text-tertiary">
+            No materials uploaded yet. Drop a PDF, Word document, or lecture photo above.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {sources.map((source) => (
               <div
                 key={source.id}
-                className="card p-4 flex items-center justify-between gap-4 group"
+                className="card p-4 flex flex-col justify-between space-y-3 hover:border-lime-500/30 transition-all group"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 bg-bg-elevated rounded border border-bg-border text-text-secondary">
-                    <FileText size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-medium text-text-primary truncate">
-                      {source.filename}
-                    </h4>
-                    <div className="flex items-center gap-3 text-[11px] text-text-tertiary mt-0.5 font-mono">
-                      {source.page_count !== null && (
-                        <span>{source.page_count} {source.page_count === 1 ? "page" : "pages"}</span>
-                      )}
-                      {source.chunk_count !== undefined && (
-                        <span>{source.chunk_count} chunks</span>
-                      )}
-                      <span>
-                        {new Date(source.created_at).toLocaleDateString("en", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
+                <div className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {getFileIcon(source.filename, source.mime_type)}
+                      <h4 className="text-xs font-medium text-text-primary truncate">
+                        {source.filename}
+                      </h4>
                     </div>
+                    {getFormatBadge(source.filename, source.mime_type)}
                   </div>
+
+                  <p className="text-[11px] text-text-tertiary font-mono">
+                    {source.page_count ? `${source.page_count} page${source.page_count > 1 ? "s" : ""} • ` : ""}
+                    Added {new Date(source.created_at).toLocaleDateString()}
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  {/* Status pill */}
-                  {source.processing_status === "ready" && (
-                    <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
-                      Ready
-                    </span>
-                  )}
-                  {source.processing_status === "scanned" && (
-                    <span className="text-[11px] font-mono text-amber-500 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
-                      Scanned PDF
-                    </span>
-                  )}
-                  {source.processing_status === "processing" && (
-                    <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded flex items-center gap-1">
-                      <SpinnerGap size={10} className="animate-spin" />
-                      Processing
-                    </span>
-                  )}
+                <div className="pt-2 border-t border-bg-border/60 flex items-center justify-between text-xs">
+                  <span className="text-[10px] text-lime-700 dark:text-lime-300 font-mono font-medium">
+                    ✓ Indexed for AI Diagnosis
+                  </span>
 
-                  {/* Chunks Inspector Button */}
-                  {source.processing_status === "ready" && (
-                    <button
-                      disabled={uploading || generatingTopics}
-                      onClick={() => handleInspectChunks(source)}
-                      className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Inspect extracted chunks"
-                    >
-                      <Eye size={15} />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setPreviewSource(source)}
+                    className="btn-secondary px-2.5 py-1 text-[11px] flex items-center gap-1.5 hover:text-lime-700 dark:hover:text-lime-300"
+                  >
+                    <Eye size={13} />
+                    <span>Preview Document</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -494,61 +458,98 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
         )}
       </div>
 
-      {/* Chunks Drawer/Modal */}
+      {/* In-App Full Document Preview Modal (No Raw Chunks!) */}
       <AnimatePresence>
-        {inspectSource && (
-          <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+        {previewSource && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md">
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
-              className="w-full max-w-xl h-full bg-bg-surface border-l border-bg-border p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="w-full max-w-4xl max-h-[90vh] bg-bg-surface border border-bg-border rounded-xl p-5 flex flex-col justify-between overflow-hidden shadow-2xl space-y-4"
             >
-              <div>
-                <div className="flex items-center justify-between pb-4 border-b border-bg-border">
+              {/* Modal Top Bar */}
+              <div className="flex items-center justify-between pb-3 border-b border-bg-border">
+                <div className="flex items-center gap-3 min-w-0">
+                  {getFileIcon(previewSource.filename, previewSource.mime_type)}
                   <div>
-                    <h3 className="text-sm font-semibold text-text-primary truncate max-w-sm">
-                      {inspectSource.filename}
+                    <h3 className="text-sm font-semibold text-text-primary truncate max-w-md">
+                      {previewSource.filename}
                     </h3>
-                    <p className="text-xs text-text-tertiary mt-0.5 font-mono">
-                      {chunks.length} chunks indexed with FTS
+                    <p className="text-[10px] text-text-tertiary font-mono">
+                      In-App Document Preview • {previewSource.page_count ? `${previewSource.page_count} pages` : "Document"}
                     </p>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {previewSource.preview_url && (
+                    <a
+                      href={previewSource.preview_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 text-text-tertiary hover:text-text-primary rounded hover:bg-bg-elevated transition-colors"
+                      title="Open in new window"
+                    >
+                      <ArrowSquareOut size={16} />
+                    </a>
+                  )}
                   <button
-                    onClick={() => setInspectSource(null)}
-                    className="p-1 text-text-tertiary hover:text-text-primary rounded"
+                    onClick={() => setPreviewSource(null)}
+                    className="p-1.5 text-text-tertiary hover:text-text-primary rounded hover:bg-bg-elevated transition-colors"
                   >
                     <X size={18} />
                   </button>
                 </div>
+              </div>
 
-                <div className="mt-4 overflow-y-auto max-h-[calc(100vh-140px)] space-y-3 pr-1">
-                  {chunksLoading ? (
-                    <div className="py-12 text-center text-xs text-text-tertiary">
-                      Loading chunks…
-                    </div>
-                  ) : chunks.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-text-tertiary">
-                      No chunks found.
+              {/* Document Preview Content */}
+              <div className="flex-1 overflow-auto min-h-[400px]">
+                {previewSource.preview_url ? (
+                  isPdf ? (
+                    <iframe
+                      src={previewSource.preview_url}
+                      className="w-full h-[65vh] rounded-lg border border-bg-border bg-white"
+                      title={previewSource.filename}
+                    />
+                  ) : isImage ? (
+                    <div className="flex items-center justify-center h-[65vh] bg-bg-base/90 rounded-lg p-2 overflow-auto">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={previewSource.preview_url}
+                        alt={previewSource.filename}
+                        className="max-h-full max-w-full object-contain rounded-md shadow-lg"
+                      />
                     </div>
                   ) : (
-                    chunks.map((chunk) => (
-                      <div
-                        key={chunk.id}
-                        className="p-3 bg-bg-elevated border border-bg-border rounded text-xs space-y-2"
-                      >
-                        <div className="flex items-center justify-between text-[11px] text-text-tertiary font-mono">
-                          <span className="text-lime-700 dark:text-lime-300 font-semibold">Chunk #{chunk.chunk_index}</span>
-                          {chunk.page_number && <span>Page {chunk.page_number}</span>}
-                        </div>
-                        <p className="text-text-secondary leading-relaxed font-sans whitespace-pre-wrap">
-                          {chunk.text}
+                    /* Word Document or other */
+                    <div className="p-8 text-center bg-bg-elevated/40 border border-bg-border rounded-lg space-y-4 my-auto">
+                      <Article size={48} className="mx-auto text-lime-400" />
+                      <div>
+                        <h4 className="text-base font-semibold text-text-primary">
+                          {previewSource.filename}
+                        </h4>
+                        <p className="text-xs text-text-tertiary mt-1">
+                          Word Document indexed and ready for AI diagnosis and learning.
                         </p>
                       </div>
-                    ))
-                  )}
-                </div>
+                      <a
+                        href={previewSource.preview_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary inline-flex items-center gap-2 text-xs py-2 px-4 font-semibold"
+                      >
+                        <FileText size={15} />
+                        <span>Download / View Original File</span>
+                      </a>
+                    </div>
+                  )
+                ) : (
+                  <div className="p-12 text-center text-xs text-text-tertiary">
+                    Document preview is currently unavailable for this item.
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

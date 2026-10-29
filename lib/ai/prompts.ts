@@ -210,3 +210,96 @@ Return JSON:
 }
 `.trim();
 }
+
+// ---------------------------------------------------------------------------
+// Topic Masterclass & Study Guide prompt
+// ---------------------------------------------------------------------------
+
+export function studyGuidePrompt(params: {
+  topicTitle: string;
+  topicDescription?: string | null;
+  chunks: { source_id: string; page: number | null; text: string }[];
+}): string {
+  const chunkText = params.chunks
+    .map((c) => `[source_id: ${c.source_id}, page: ${c.page ?? "unknown"}]\n${c.text}`)
+    .join("\n\n---\n\n");
+
+  return `
+${SYSTEM_DIRECTIVE}
+
+You are an expert university professor creating a rich, intuitive Masterclass Study Guide for the topic: "${params.topicTitle}".
+${params.topicDescription ? `Topic description: ${params.topicDescription}` : ""}
+
+Course material excerpts:
+---
+${chunkText}
+---
+
+Your goal is to build deep conceptual understanding and eliminate misunderstandings. The guide must include:
+1. "core_concept": 2-3 engaging, well-structured paragraphs explaining the intuitive foundation, mental models, and why this concept matters. Use markdown formatting like bold terms (**bold**).
+2. "key_rules": 3-5 core formulas, theorems, definitions, or procedural rules.
+3. "pitfalls": 3-4 subtle traps, common mistakes, or misconceptions students frequently make.
+4. "worked_example": An object with:
+   - "problem": A realistic university exam-style scenario.
+   - "solution_steps": Array of 3-5 step-by-step reasoning steps leading to the answer.
+   - "key_takeaway": The single most important insight from this example.
+5. "diagnostic_check": An object with:
+   - "question": A conceptual multiple-choice question testing the core intuition (not surface trivia).
+   - "options": EXACTLY 4 options [{ "key": "A", "text": "..." }, { "key": "B", "text": "..." }, { "key": "C", "text": "..." }, { "key": "D", "text": "..." }]
+   - "correct_option": "A" | "B" | "C" | "D"
+   - "distractor_misconceptions": An object mapping keys A, B, C, D to the thought process or flaw behind choosing each option.
+   - "rationale": Comprehensive explanation of why the correct option holds and why each distractor fails.
+   - "belief_simulation": { "implied_belief": "...", "consequence": "...", "why_it_breaks": "..." } or null.
+   - "citations": Array of { "source_id": "...", "page": number|null, "quote": "..." } from the provided context excerpts.
+
+Return valid JSON matching this schema exactly.
+`.trim();
+}
+
+// ---------------------------------------------------------------------------
+// 5-Question Multiple-Choice Exam Set prompt
+// ---------------------------------------------------------------------------
+
+export function examSetPrompt(params: {
+  topicTitles: string[];
+  topicIds: string[];
+  chunks: { source_id: string; page: number | null; text: string }[];
+}): string {
+  const chunkText = params.chunks
+    .map((c) => `[source_id: ${c.source_id}, page: ${c.page ?? "unknown"}]\n${c.text}`)
+    .join("\n\n---\n\n");
+
+  return `
+${SYSTEM_DIRECTIVE}
+
+Generate a high-quality 5-question multiple-choice exam practice set for this university course based on the provided material.
+Course topics: ${params.topicTitles.join(", ")}
+Available topic IDs: ${params.topicIds.join(", ")}
+
+Course material excerpts:
+---
+${chunkText}
+---
+
+Rules:
+1. Generate EXACTLY 5 distinct questions covering core reasoning across the topics.
+2. For each question, provide:
+   - "id": number (1 to 5)
+   - "topic_id": string (must match one of the available topic IDs)
+   - "topic_title": string
+   - "question": string (clear, conceptual multiple-choice question)
+   - "options": EXACTLY 4 options:
+     [
+       { "key": "A", "text": "..." },
+       { "key": "B", "text": "..." },
+       { "key": "C", "text": "..." },
+       { "key": "D", "text": "..." }
+     ]
+   - "correct_option": "A" | "B" | "C" | "D"
+   - "rationale": string (comprehensive explanation of correct reasoning and why distractors are traps)
+   - "citations": array of { "source_id": "...", "page": number|null, "quote": "..." } from the context excerpts
+
+Return valid JSON with a "questions" array of 5 objects.
+`.trim();
+}
+
