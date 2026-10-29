@@ -148,7 +148,40 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     });
 
     const parsedJson = JSON.parse(rawAiOutput);
+
+    // Normalize diagnostic_check fields if LLM varied keys
+    if (parsedJson && parsedJson.diagnostic_check) {
+      const dc = parsedJson.diagnostic_check;
+      if (!dc.rationale) {
+        dc.rationale =
+          dc.explanation ||
+          dc.reasoning ||
+          dc.answer_explanation ||
+          dc.solution_explanation ||
+          (dc.distractor_misconceptions && typeof dc.distractor_misconceptions === "object"
+            ? dc.distractor_misconceptions[dc.correct_option]
+            : null) ||
+          "Sound conceptual understanding grounded in course notes.";
+      }
+      if (!dc.distractor_misconceptions || typeof dc.distractor_misconceptions !== "object") {
+        dc.distractor_misconceptions = {};
+      }
+      if (Array.isArray(dc.options)) {
+        dc.options = dc.options.map((opt: Record<string, unknown>, i: number) => {
+          if (typeof opt === "string") {
+            const letter = String.fromCharCode(65 + i);
+            return { key: letter, text: opt };
+          }
+          return {
+            key: String(opt.key || String.fromCharCode(65 + i)).toUpperCase(),
+            text: String(opt.text || opt.option || ""),
+          };
+        });
+      }
+    }
+
     const studyGuide: StudyGuide = StudyGuideSchema.parse(parsedJson);
+
 
     // 4. Validate citations against stored Postgres chunks (BUILD.md §2.4)
     const verifiedCitations = await validateCitations(

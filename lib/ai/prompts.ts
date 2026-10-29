@@ -248,7 +248,7 @@ Your goal is to build deep conceptual understanding and eliminate misunderstandi
    - "options": EXACTLY 4 options [{ "key": "A", "text": "..." }, { "key": "B", "text": "..." }, { "key": "C", "text": "..." }, { "key": "D", "text": "..." }]
    - "correct_option": "A" | "B" | "C" | "D"
    - "distractor_misconceptions": An object mapping keys A, B, C, D to the thought process or flaw behind choosing each option.
-   - "rationale": Comprehensive explanation of why the correct option holds and why each distractor fails.
+   - "rationale": Comprehensive explanation of why the correct option holds and why each distractor fails (required field).
    - "belief_simulation": { "implied_belief": "...", "consequence": "...", "why_it_breaks": "..." } or null.
    - "citations": Array of { "source_id": "...", "page": number|null, "quote": "..." } from the provided context excerpts.
 
