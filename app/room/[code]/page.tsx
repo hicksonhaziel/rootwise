@@ -145,8 +145,8 @@ export default function RoomParticipantPage({
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex flex-col">
       {/* Header */}
-      <header className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-sm sticky top-0 z-30">
-        <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
+      <header className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <RootwiseLogo variant="mark" size={20} />
             <div>

@@ -2,7 +2,7 @@ export default function DashboardLoading() {
   return (
     <div className="min-h-screen bg-bg-base animate-pulse">
       {/* Top nav skeleton */}
-      <nav className="border-b border-bg-border bg-bg-base/80 h-14">
+      <nav className="border-b border-bg-border bg-bg-base/80 h-16">
         <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
           <div className="w-28 h-6 rounded bg-bg-elevated" />
           <div className="flex items-center gap-3">

@@ -80,8 +80,8 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
   return (
     <div className="min-h-screen bg-bg-base">
       {/* Top nav */}
-      <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <RootwiseLogo variant="wordmark" size={28} />
 
           <div className="flex items-center gap-3">

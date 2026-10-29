@@ -59,8 +59,8 @@ export function CourseWorkspace({
   return (
     <div className="min-h-screen bg-bg-base">
       {/* Top nav */}
-      <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"

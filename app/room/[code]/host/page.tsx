@@ -174,8 +174,8 @@ export default function RoomHostPage({
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex flex-col">
       {/* Top Navigation */}
-      <header className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-sm sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <header className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
