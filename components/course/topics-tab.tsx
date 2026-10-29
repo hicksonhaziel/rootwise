@@ -12,7 +12,13 @@ import {
   SpinnerGap,
   Info,
   MapTrifold,
+  ClockCounterClockwise,
+  TreeStructure,
+  ListBullets,
 } from "@phosphor-icons/react";
+import { AttemptDrawer } from "./attempt-drawer";
+import { LivingRootTree } from "./living-root-tree";
+import { cachedFetch, cacheInvalidate } from "@/lib/cache";
 
 interface Topic {
   id: string;
@@ -48,16 +54,19 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
   const [editDesc, setEditDesc] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null);
+  const [drawerTopicId, setDrawerTopicId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "tree">("list");
 
   const isBusy = generating || savingEdit || addingTopic || Boolean(deletingTopicId);
 
-  const fetchTopics = useCallback(async () => {
+  const fetchTopics = useCallback(async (force = false) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/courses/${courseId}/topics`);
-      if (!res.ok) throw new Error("Failed to load topics");
-      const data = await res.json();
+      if (force) {
+        cacheInvalidate(`/api/courses/${courseId}/topics`);
+      }
+      const data = await cachedFetch<{ topics: Topic[] }>(`/api/courses/${courseId}/topics`);
       setTopics(data.topics ?? []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error loading topics";
@@ -91,6 +100,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add topic");
 
+      cacheInvalidate(`/api/courses/${courseId}/topics`);
       setTopics((prev) => [...prev, data.topic]);
       setNewTitle("");
       setNewDescription("");
@@ -132,6 +142,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save topic");
 
+      cacheInvalidate(`/api/courses/${courseId}/topics`);
       setTopics((prev) =>
         prev.map((t) => (t.id === topicId ? { ...t, ...data.topic } : t))
       );
@@ -155,6 +166,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
 
       if (!res.ok) throw new Error("Failed to delete topic");
 
+      cacheInvalidate(`/api/courses/${courseId}/topics`);
       setTopics((prev) => prev.filter((t) => t.id !== topicId));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error deleting topic";
@@ -235,6 +247,36 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* View Mode Toggle */}
+          <div className="flex bg-bg-elevated border border-bg-border rounded p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 transition-colors ${
+                viewMode === "list"
+                  ? "bg-bg-surface text-text-primary shadow-sm"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+              title="List View"
+            >
+              <ListBullets size={13} />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("tree")}
+              className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 transition-colors ${
+                viewMode === "tree"
+                  ? "bg-bg-surface text-lime-700 dark:text-lime-300 shadow-sm"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+              title="Living Root Tree View"
+            >
+              <TreeStructure size={13} />
+              <span className="hidden sm:inline">Tree</span>
+            </button>
+          </div>
+
           <button
             onClick={() => setShowAddForm(true)}
             disabled={generating}
@@ -360,6 +402,17 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
               Upload course PDFs in the Materials tab, then click &ldquo;AI Generate&rdquo; or add topics manually.
             </p>
           </div>
+        ) : viewMode === "tree" ? (
+          <LivingRootTree
+            topics={topics}
+            onSelectTopic={(id) => {
+              if (onSelectTopicForDiagnostic) {
+                onSelectTopicForDiagnostic(id);
+              } else {
+                setDrawerTopicId(id);
+              }
+            }}
+          />
         ) : (
           <div className="space-y-2">
             {topics.map((topic) => {
@@ -415,9 +468,12 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
                   ) : (
                     /* Normal display mode */
                     <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1 min-w-0">
+                      <div
+                        onClick={() => setDrawerTopicId(topic.id)}
+                        className="space-y-1 min-w-0 cursor-pointer flex-1"
+                      >
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-xs font-medium text-text-primary">
+                          <h4 className="text-xs font-medium text-text-primary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors">
                             {topic.title}
                           </h4>
                           {getStatusBadge(topic.status, topic.confident_error)}
@@ -447,6 +503,14 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
 
                         <button
                           disabled={isBusy}
+                          onClick={() => setDrawerTopicId(topic.id)}
+                          className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="View attempt history & status rationale"
+                        >
+                          <ClockCounterClockwise size={14} />
+                        </button>
+                        <button
+                          disabled={isBusy}
                           onClick={() => startEditing(topic)}
                           className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Rename / edit topic"
@@ -474,6 +538,17 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
           </div>
         )}
       </div>
+
+      {/* Attempt History Drawer (BUILD.md §3.1) */}
+      <AttemptDrawer
+        courseId={courseId}
+        topicId={drawerTopicId}
+        onClose={() => setDrawerTopicId(null)}
+        onDiagnose={(id) => {
+          setDrawerTopicId(null);
+          onSelectTopicForDiagnostic?.(id);
+        }}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   X,
   Article,
 } from "@phosphor-icons/react";
+import { cachedFetch, cacheInvalidate } from "@/lib/cache";
 
 interface Source {
   id: string;
@@ -64,12 +65,13 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchSources = useCallback(async () => {
+  const fetchSources = useCallback(async (force = false) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/courses/${courseId}/sources`);
-      if (!res.ok) throw new Error("Failed to load materials");
-      const data = await res.json();
+      if (force) {
+        cacheInvalidate(`/api/courses/${courseId}/sources`);
+      }
+      const data = await cachedFetch<{ sources: Source[] }>(`/api/courses/${courseId}/sources`);
       setSources(data.sources ?? []);
     } catch (err) {
       console.error(err);
@@ -102,13 +104,13 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
       if (!res.ok) {
         if (data.isScanned) {
           setScannedWarning(data.error || "This looks scanned. Rootwise needs a text PDF");
-          await fetchSources();
+          await fetchSources(true);
           return;
         }
         throw new Error(data.error || "Upload failed");
       }
 
-      await fetchSources();
+      await fetchSources(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload failed";
       setUploadError(msg);
@@ -141,7 +143,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
       setPastedText("");
       setPastedTitle("");
       setShowPasteMode(false);
-      await fetchSources();
+      await fetchSources(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save notes";
       setUploadError(msg);
@@ -154,9 +156,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
     setInspectSource(source);
     setChunksLoading(true);
     try {
-      const res = await fetch(`/api/sources/${source.id}/chunks`);
-      if (!res.ok) throw new Error("Failed to load chunks");
-      const data = await res.json();
+      const data = await cachedFetch<{ chunks: Chunk[] }>(`/api/sources/${source.id}/chunks`);
       setChunks(data.chunks ?? []);
     } catch (err) {
       console.error(err);
