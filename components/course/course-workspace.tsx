@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { MaterialsTab } from "@/components/sources/materials-tab";
@@ -36,9 +36,14 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "room", label: "Room", icon: UsersThree },
 ];
 
-export function CourseWorkspace({ course }: { course: Course }) {
-  const [activeTab, setActiveTab] = useState<Tab>("materials");
-  const router = useRouter();
+export function CourseWorkspace({
+  course,
+  initialTab = "materials",
+}: {
+  course: Course;
+  initialTab?: Tab;
+}) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   return (
     <div className="min-h-screen bg-bg-base">
@@ -46,13 +51,14 @@ export function CourseWorkspace({ course }: { course: Course }) {
       <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="p-1.5 text-text-tertiary hover:text-text-primary rounded-md transition-colors"
+            <Link
+              href="/dashboard"
+              prefetch={true}
+              className="p-1.5 text-text-tertiary hover:text-text-primary rounded-md transition-colors inline-flex items-center justify-center"
               title="Back to dashboard"
             >
               <ArrowLeft size={16} weight="bold" />
-            </button>
+            </Link>
             <RootwiseLogo variant="mark" size={22} />
             <div className="flex items-center gap-2">
               {course.course_code && (
@@ -110,13 +116,13 @@ export function CourseWorkspace({ course }: { course: Course }) {
 
       {/* Tab content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
           >
             {activeTab === "overview" && (
               <OverviewTab

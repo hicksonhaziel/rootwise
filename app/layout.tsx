@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "Rootwise — Every wrong answer has a root.",
   description:
     "An open-source misconception finder for university courses. Rootwise reads your answer, finds the belief that produced it, and proves the fix stuck.",

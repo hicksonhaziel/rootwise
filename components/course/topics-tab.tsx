@@ -47,6 +47,9 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null);
+
+  const isBusy = generating || savingEdit || addingTopic || Boolean(deletingTopicId);
 
   const fetchTopics = useCallback(async () => {
     try {
@@ -144,6 +147,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
   async function handleDeleteTopic(topicId: string) {
     if (!confirm("Are you sure you want to delete this topic?")) return;
 
+    setDeletingTopicId(topicId);
     try {
       const res = await fetch(`/api/courses/${courseId}/topics/${topicId}`, {
         method: "DELETE",
@@ -155,6 +159,8 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error deleting topic";
       setError(msg);
+    } finally {
+      setDeletingTopicId(null);
     }
   }
 
@@ -231,7 +237,8 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-border text-text-primary text-xs font-medium rounded transition-colors"
+            disabled={generating}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-border text-text-primary text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={13} weight="bold" />
             Add Topic
@@ -239,7 +246,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
           <button
             onClick={handleGenerateTopics}
             disabled={generating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded hover:bg-lime-400 disabled:opacity-50 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {generating ? (
               <>
@@ -278,8 +285,9 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
               </h3>
               <button
                 type="button"
+                disabled={addingTopic}
                 onClick={() => setShowAddForm(false)}
-                className="text-text-tertiary hover:text-text-secondary"
+                className="text-text-tertiary hover:text-text-secondary disabled:opacity-50"
               >
                 <X size={15} />
               </button>
@@ -291,10 +299,11 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
                 type="text"
                 required
                 autoFocus
+                disabled={addingTopic}
                 placeholder="e.g. L'Hôpital's Rule & Indeterminate Forms"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300"
+                className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300 disabled:opacity-50"
               />
             </div>
 
@@ -302,25 +311,27 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
               <label className="text-xs text-text-tertiary">Description (optional)</label>
               <textarea
                 rows={2}
+                disabled={addingTopic}
                 placeholder="Brief summary of concepts tested in this topic…"
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
-                className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300 resize-none"
+                className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300 resize-none disabled:opacity-50"
               />
             </div>
 
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
+                disabled={addingTopic}
                 onClick={() => setShowAddForm(false)}
-                className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary"
+                className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={addingTopic || !newTitle.trim()}
-                className="px-4 py-1.5 bg-lime-300 text-text-inverse text-xs font-semibold rounded hover:bg-lime-400 disabled:opacity-50"
+                className="px-4 py-1.5 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 {addingTopic ? "Adding…" : "Save Topic"}
               </button>
@@ -364,22 +375,25 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
                     <div className="space-y-3">
                       <input
                         type="text"
+                        disabled={savingEdit}
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full bg-bg-elevated border border-lime-300 rounded px-2.5 py-1.5 text-xs text-text-primary outline-none"
+                        className="w-full bg-bg-elevated border border-lime-300 rounded px-2.5 py-1.5 text-xs text-text-primary outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <textarea
                         rows={2}
+                        disabled={savingEdit}
                         value={editDesc}
                         onChange={(e) => setEditDesc(e.target.value)}
                         placeholder="Description (optional)"
-                        className="w-full bg-bg-elevated border border-bg-border rounded px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-lime-300 resize-none"
+                        className="w-full bg-bg-elevated border border-bg-border rounded px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-lime-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
+                          disabled={savingEdit}
                           onClick={cancelEditing}
-                          className="px-2.5 py-1 text-xs text-text-secondary hover:text-text-primary"
+                          className="px-2.5 py-1 text-xs text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>
@@ -387,9 +401,13 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
                           type="button"
                           disabled={savingEdit || !editTitle.trim()}
                           onClick={() => saveEditing(topic.id)}
-                          className="flex items-center gap-1 px-3 py-1 bg-lime-300 text-text-inverse text-xs font-semibold rounded hover:bg-lime-400"
+                          className="flex items-center gap-1 px-3 py-1 bg-lime-300 text-text-inverse text-xs font-semibold rounded hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Check size={13} weight="bold" />
+                          {savingEdit ? (
+                            <SpinnerGap size={13} className="animate-spin" />
+                          ) : (
+                            <Check size={13} weight="bold" />
+                          )}
                           Save
                         </button>
                       </div>
@@ -419,26 +437,33 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
                       <div className="flex items-center gap-1 shrink-0">
                         {onSelectTopicForDiagnostic && (
                           <button
+                            disabled={isBusy}
                             onClick={() => onSelectTopicForDiagnostic(topic.id)}
-                            className="px-2.5 py-1 bg-bg-elevated hover:bg-bg-border text-lime-700 dark:text-lime-300 text-xs font-semibold rounded transition-colors mr-1"
+                            className="px-2.5 py-1 bg-bg-elevated hover:bg-bg-border text-lime-700 dark:text-lime-300 text-xs font-semibold rounded transition-colors mr-1 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Diagnose →
                           </button>
                         )}
 
                         <button
+                          disabled={isBusy}
                           onClick={() => startEditing(topic)}
-                          className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors"
+                          className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Rename / edit topic"
                         >
                           <PencilSimple size={14} />
                         </button>
                         <button
+                          disabled={isBusy}
                           onClick={() => handleDeleteTopic(topic.id)}
-                          className="p-1.5 text-text-tertiary hover:text-red-400 hover:bg-bg-elevated rounded transition-colors"
+                          className="p-1.5 text-text-tertiary hover:text-red-400 hover:bg-bg-elevated rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Delete topic"
                         >
-                          <Trash size={14} />
+                          {deletingTopicId === topic.id ? (
+                            <SpinnerGap size={14} className="animate-spin text-text-tertiary" />
+                          ) : (
+                            <Trash size={14} />
+                          )}
                         </button>
                       </div>
                     </div>

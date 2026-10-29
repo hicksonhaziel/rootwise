@@ -160,12 +160,14 @@ export default function LoginPage() {
           <div className="flex bg-bg-elevated border border-bg-border rounded-lg p-1 mb-5 relative">
             <button
               type="button"
+              disabled={loading}
               onClick={() => {
+                if (loading) return;
                 setMode("login");
                 setError(null);
                 setInfoMessage(null);
               }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md relative z-10 transition-colors ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md relative z-10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 mode === "login" ? "text-text-primary" : "text-text-tertiary hover:text-text-secondary"
               }`}
             >
@@ -181,12 +183,14 @@ export default function LoginPage() {
 
             <button
               type="button"
+              disabled={loading}
               onClick={() => {
+                if (loading) return;
                 setMode("signup");
                 setError(null);
                 setInfoMessage(null);
               }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md relative z-10 transition-colors ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md relative z-10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 mode === "signup" ? "text-text-primary" : "text-text-tertiary hover:text-text-secondary"
               }`}
             >
@@ -240,12 +244,13 @@ export default function LoginPage() {
               <input
                 id="email"
                 type="email"
+                disabled={loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
                 placeholder="student@oauife.edu.ng"
-                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 transition-colors"
+                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               />
             </div>
 
@@ -261,12 +266,13 @@ export default function LoginPage() {
               <input
                 id="password"
                 type="password"
+                disabled={loading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
                 placeholder="••••••••"
-                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 transition-colors"
+                className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               />
             </div>
 

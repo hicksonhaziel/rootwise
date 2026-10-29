@@ -7,7 +7,7 @@ import { CreateCourseModal } from "@/components/course/create-course-modal";
 import { CourseCard } from "@/components/course/course-card";
 import { TopicRevisitList } from "@/components/course/topic-revisit-list";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Plus, SignOut } from "@phosphor-icons/react";
+import { Plus, SignOut, SpinnerGap } from "@phosphor-icons/react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -58,12 +58,15 @@ const itemVariants = {
 export function DashboardClient({ user, courses: initialCourses, weakTopics }: Props) {
   const [courses, setCourses] = useState(initialCourses);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   const greeting = getGreeting();
 
   async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
@@ -88,10 +91,15 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
             </span>
             <button
               onClick={handleSignOut}
-              className="p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-bg-elevated rounded-md transition-all"
+              disabled={signingOut}
+              className="p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-bg-elevated rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               title="Sign out"
             >
-              <SignOut size={16} />
+              {signingOut ? (
+                <SpinnerGap size={16} className="animate-spin" />
+              ) : (
+                <SignOut size={16} />
+              )}
             </button>
           </div>
         </div>
@@ -125,8 +133,9 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
                   Your courses
                 </h2>
                 <button
+                  disabled={signingOut}
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-1.5 text-xs text-lime-700 dark:text-lime-300 hover:text-lime-800 dark:hover:text-lime-400 font-semibold transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-lime-700 dark:text-lime-300 hover:text-lime-800 dark:hover:text-lime-400 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus size={14} weight="bold" />
                   New course
@@ -135,10 +144,11 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
 
               {courses.length === 0 ? (
                 <motion.button
+                  disabled={signingOut}
                   onClick={() => setShowCreateModal(true)}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full border-2 border-dashed border-bg-border rounded-xl py-16 text-center hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-colors group bg-bg-surface/50"
+                  className="w-full border-2 border-dashed border-bg-border rounded-xl py-16 text-center hover:border-lime-500/40 dark:hover:border-lime-300/30 transition-colors group bg-bg-surface/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="w-12 h-12 rounded-xl bg-bg-elevated flex items-center justify-center mx-auto mb-3 group-hover:bg-lime-500/10 dark:group-hover:bg-lime-300/10 transition-colors">
                     <Plus size={24} className="text-text-tertiary group-hover:text-lime-700 dark:group-hover:text-lime-300 transition-colors" />

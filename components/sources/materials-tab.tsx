@@ -211,10 +211,10 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
           {hasReadySources && (
             <motion.button
               onClick={handleGenerateTopics}
-              disabled={generatingTopics}
+              disabled={generatingTopics || uploading}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-lime-300 text-text-inverse text-xs font-semibold rounded-md hover:bg-lime-400 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded-md hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               {generatingTopics ? (
                 <>
@@ -232,7 +232,8 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
 
           <button
             onClick={() => setShowPasteMode(!showPasteMode)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-bg-surface border border-bg-border text-text-secondary hover:text-text-primary text-xs font-medium rounded-md transition-colors"
+            disabled={uploading || generatingTopics}
+            className="flex items-center gap-1.5 px-3 py-2 bg-bg-surface border border-bg-border text-text-secondary hover:text-text-primary text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Article size={14} />
             {showPasteMode ? "Upload PDF" : "Paste Notes"}
@@ -349,8 +350,9 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
             </h3>
             <button
               type="button"
+              disabled={pasting}
               onClick={() => setShowPasteMode(false)}
-              className="text-text-tertiary hover:text-text-secondary"
+              className="text-text-tertiary hover:text-text-secondary disabled:opacity-50"
             >
               <X size={16} />
             </button>
@@ -362,10 +364,11 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
             </label>
             <input
               type="text"
+              disabled={pasting}
               placeholder="e.g. Chapter 1: Calculus Limits"
               value={pastedTitle}
               onChange={(e) => setPastedTitle(e.target.value)}
-              className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300"
+              className="w-full bg-bg-elevated border border-bg-border rounded px-3 py-2 text-xs text-text-primary outline-none focus:border-lime-300 disabled:opacity-50"
             />
           </div>
 
@@ -376,25 +379,27 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
             <textarea
               rows={6}
               required
+              disabled={pasting}
               placeholder="Paste notes, theorems, formulas, or lecture transcripts here…"
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
-              className="w-full bg-bg-elevated border border-bg-border rounded p-3 text-xs text-text-primary font-mono outline-none focus:border-lime-300 resize-y"
+              className="w-full bg-bg-elevated border border-bg-border rounded p-3 text-xs text-text-primary font-mono outline-none focus:border-lime-300 resize-y disabled:opacity-50"
             />
           </div>
 
           <div className="flex justify-end gap-2">
             <button
               type="button"
+              disabled={pasting}
               onClick={() => setShowPasteMode(false)}
-              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary"
+              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pasting || pastedText.trim().length < 30}
-              className="px-4 py-1.5 bg-lime-300 text-text-inverse text-xs font-semibold rounded hover:bg-lime-400 disabled:opacity-50"
+              className="px-4 py-1.5 bg-lime-300 text-[#0A0A0A] text-xs font-bold rounded hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {pasting ? "Chunking notes…" : "Save & Index Notes"}
             </button>
@@ -474,8 +479,9 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
                   {/* Chunks Inspector Button */}
                   {source.processing_status === "ready" && (
                     <button
+                      disabled={uploading || generatingTopics}
                       onClick={() => handleInspectChunks(source)}
-                      className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors"
+                      className="p-1.5 text-text-tertiary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Inspect extracted chunks"
                     >
                       <Eye size={15} />

@@ -4,25 +4,31 @@ import { CourseWorkspace } from "@/components/course/course-workspace";
 
 interface Props {
   params: Promise<{ courseId: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }
 
-export default async function CoursePage({ params }: Props) {
+export default async function CoursePage({ params, searchParams }: Props) {
   const { courseId } = await params;
+  const { tab } = (await searchParams) ?? {};
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [userRes, courseRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("courses")
+      .select("id, title, course_code, created_at")
+      .eq("id", courseId)
+      .single(),
+  ]);
 
-  if (!user) redirect("/login");
+  if (!userRes.data.user) redirect("/login");
+  if (courseRes.error || !courseRes.data) redirect("/dashboard");
 
-  const { data: course, error } = await supabase
-    .from("courses")
-    .select("id, title, course_code, created_at")
-    .eq("id", courseId)
-    .single();
+  const validTabs = ["overview", "materials", "topics", "learn", "exam", "room"] as const;
+  const initialTab =
+    tab && (validTabs as readonly string[]).includes(tab)
+      ? (tab as (typeof validTabs)[number])
+      : "materials";
 
-  if (error || !course) redirect("/dashboard");
-
-  return <CourseWorkspace course={course} />;
+  return <CourseWorkspace course={courseRes.data} initialTab={initialTab} />;
 }

@@ -72,7 +72,7 @@ export function CreateCourseModal({ onClose, onCreated }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
+        onClick={() => !loading && onClose()}
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
       />
 
@@ -91,8 +91,9 @@ export function CreateCourseModal({ onClose, onCreated }: Props) {
               Create a new course
             </h2>
             <button
-              onClick={onClose}
-              className="p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-bg-elevated rounded-md transition-all"
+              onClick={() => !loading && onClose()}
+              disabled={loading}
+              className="p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-bg-elevated rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X size={16} />
             </button>
@@ -111,12 +112,13 @@ export function CreateCourseModal({ onClose, onCreated }: Props) {
               </label>
               <input
                 type="text"
+                disabled={loading}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 autoFocus
                 placeholder="e.g. Engineering Mathematics"
-                className="w-full bg-bg-elevated border border-bg-border rounded-md px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 transition-colors"
+                className="w-full bg-bg-elevated border border-bg-border rounded-md px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               />
             </div>
 
@@ -129,18 +131,20 @@ export function CreateCourseModal({ onClose, onCreated }: Props) {
               </label>
               <input
                 type="text"
+                disabled={loading}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="e.g. MTH101"
-                className="w-full bg-bg-elevated border border-bg-border rounded-md px-3 py-2.5 text-sm font-mono text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 transition-colors"
+                className="w-full bg-bg-elevated border border-bg-border rounded-md px-3 py-2.5 text-sm font-mono text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               />
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
+                disabled={loading}
                 onClick={onClose}
-                className="flex-1 bg-bg-elevated text-text-secondary text-sm font-medium py-2.5 rounded-md hover:bg-bg-overlay transition-colors"
+                className="flex-1 bg-bg-elevated text-text-secondary text-sm font-medium py-2.5 rounded-md hover:bg-bg-overlay disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel
               </button>
