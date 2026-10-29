@@ -221,7 +221,7 @@ npm run build
 
 ### Team Members
 - **Hickson Haziel** — Full-Stack Engineering, AI Pipeline & Ingestion Architecture
-- **Co-Builder / Teammate** — Pedagogical Design, Evaluation Fixtures & User Research
+- **Mivanyi Agabus Kenneth** — UI & Product Design, Pedagogical Flow & User Experience
 
 ### Open-Source Compliance & AI Disclosure
 - **Open-Weight Models**: `openai/gpt-oss-120b` (Apache 2.0), `qwen3:4b` (Apache 2.0 / Qwen), `llama-3.2-11b-vision-preview` (Community).
