@@ -36,7 +36,7 @@ export function TopicRevisitList({ topics }: { topics: WeakTopic[] }) {
         const config =
           STATUS_CONFIG[t.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.needs_work;
         const href = t.topics?.course_id
-          ? `/courses/${t.topics.course_id}?tab=topics`
+          ? `/courses/${t.topics.course_id}?tab=learn&topic=${t.topic_id}`
           : "#";
 
         return (

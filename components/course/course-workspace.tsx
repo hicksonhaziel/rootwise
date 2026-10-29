@@ -7,6 +7,7 @@ import { RootwiseLogo } from "@/components/ui/rootwise-logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { MaterialsTab } from "@/components/sources/materials-tab";
 import { TopicsTab } from "@/components/course/topics-tab";
+import { DiagnosticSession } from "@/components/learning/diagnostic-session";
 import {
   ArrowLeft,
   BookOpen,
@@ -39,11 +40,14 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 export function CourseWorkspace({
   course,
   initialTab = "materials",
+  initialTopicId = null,
 }: {
   course: Course;
   initialTab?: Tab;
+  initialTopicId?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(initialTopicId);
 
   return (
     <div className="min-h-screen bg-bg-base">
@@ -139,11 +143,18 @@ export function CourseWorkspace({
           {activeTab === "topics" && (
             <TopicsTab
               courseId={course.id}
-              onSelectTopicForDiagnostic={() => setActiveTab("learn")}
+              onSelectTopicForDiagnostic={(topicId) => {
+                setSelectedTopicId(topicId);
+                setActiveTab("learn");
+              }}
             />
           )}
           {activeTab === "learn" && (
-            <ComingSoon label="Diagnostic Learning Loop" phase="Phase 2" />
+            <DiagnosticSession
+              courseId={course.id}
+              initialTopicId={selectedTopicId}
+              onNavigateToTopics={() => setActiveTab("topics")}
+            />
           )}
           {activeTab === "exam" && (
             <ComingSoon label="Exam Practice" phase="Phase 3" />

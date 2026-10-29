@@ -40,8 +40,8 @@ export const AssessmentSchema = z.enum(["correct", "partial", "incorrect", "insu
 
 export const RawCitationSchema = z.object({
   source_id: z.string().uuid("Citation source_id must be a valid UUID"),
-  page: z.number().int().positive().nullable(),
-  quote: z.string().min(10, "Quote too short to be meaningful"),
+  page: z.number().int().nullable().optional(),
+  quote: z.string().min(5, "Quote too short to be meaningful"),
 });
 
 export type RawCitation = z.infer<typeof RawCitationSchema>;
@@ -82,14 +82,14 @@ export const PossibleGapSchema = z.object({
 
 export const DiagnosisResponseSchema = z.object({
   assessment: AssessmentSchema,
-  what_seems_correct: z.array(z.string()),
+  what_seems_correct: z.array(z.string()).default([]),
   possible_gap: PossibleGapSchema,
   explanation: z.string(),
   next_step: NextStepSchema,
   belief_simulation: BeliefSimulationSchema.nullable().optional(),
   prerequisite_topic_id: z.string().uuid().nullable().optional(),
   follow_up_question: z.string(),
-  citations: z.array(RawCitationSchema),
+  citations: z.array(RawCitationSchema).default([]),
   limitations: z.array(z.string()).optional(),
 });
 
@@ -118,9 +118,9 @@ export type TopicOutline = z.infer<typeof TopicOutlineSchema>;
 // ---------------------------------------------------------------------------
 
 export const QuestionResponseSchema = z.object({
-  question: z.string().min(20),
+  question: z.string().min(15),
   context_hint: z.string().optional(),
-  citations: z.array(RawCitationSchema),
+  citations: z.array(RawCitationSchema).default([]),
 });
 
 export type QuestionResponse = z.infer<typeof QuestionResponseSchema>;

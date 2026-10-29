@@ -4,12 +4,12 @@ import { CourseWorkspace } from "@/components/course/course-workspace";
 
 interface Props {
   params: Promise<{ courseId: string }>;
-  searchParams?: Promise<{ tab?: string }>;
+  searchParams?: Promise<{ tab?: string; topic?: string }>;
 }
 
 export default async function CoursePage({ params, searchParams }: Props) {
   const { courseId } = await params;
-  const { tab } = (await searchParams) ?? {};
+  const { tab, topic } = (await searchParams) ?? {};
   const supabase = await createClient();
 
   const [userRes, courseRes] = await Promise.all([
@@ -28,7 +28,15 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const initialTab =
     tab && (validTabs as readonly string[]).includes(tab)
       ? (tab as (typeof validTabs)[number])
+      : topic
+      ? "learn"
       : "materials";
 
-  return <CourseWorkspace course={courseRes.data} initialTab={initialTab} />;
+  return (
+    <CourseWorkspace
+      course={courseRes.data}
+      initialTab={initialTab}
+      initialTopicId={topic ?? null}
+    />
+  );
 }
