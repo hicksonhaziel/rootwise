@@ -90,9 +90,9 @@ export function CourseWorkspace({
       </nav>
 
       {/* Tab bar */}
-      <div className="border-b border-bg-border bg-bg-surface/60 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex gap-2 -mb-px overflow-x-auto py-1">
+      <div className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-md sticky top-16 z-30">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 w-full no-scrollbar">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = tab.id === activeTab;
@@ -101,11 +101,11 @@ export function CourseWorkspace({
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap rounded-md
+                    relative flex items-center gap-2 px-3.5 h-9 text-xs font-medium transition-all whitespace-nowrap rounded-lg
                     ${
                       isActive
-                        ? "text-lime-700 dark:text-lime-300 font-semibold"
-                        : "text-text-tertiary hover:text-text-secondary"
+                        ? "text-lime-700 dark:text-lime-300 font-semibold shadow-sm"
+                        : "text-text-secondary hover:text-text-primary hover:bg-bg-elevated/60"
                     }
                   `}
                 >
@@ -113,10 +113,10 @@ export function CourseWorkspace({
                     <motion.div
                       layoutId="activeWorkspaceTab"
                       transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                      className="absolute inset-0 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/25 dark:border-lime-300/25 rounded-md"
+                      className="absolute inset-0 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/30 dark:border-lime-300/30 rounded-lg"
                     />
                   )}
-                  <Icon size={14} weight={isActive ? "fill" : "regular"} className="relative z-10" />
+                  <Icon size={16} weight={isActive ? "fill" : "regular"} className="relative z-10 shrink-0" />
                   <span className="relative z-10">{tab.label}</span>
                 </button>
               );

@@ -14,12 +14,12 @@ export default function CourseLoading() {
       </nav>
 
       {/* Tab bar skeleton */}
-      <div className="border-b border-bg-border bg-bg-surface/40">
-        <div className="max-w-6xl mx-auto px-6 h-11 flex items-center gap-3">
-          <div className="w-20 h-7 rounded-md bg-bg-elevated" />
-          <div className="w-20 h-7 rounded-md bg-bg-elevated" />
-          <div className="w-20 h-7 rounded-md bg-bg-elevated" />
-          <div className="w-16 h-7 rounded-md bg-bg-elevated" />
+      <div className="border-b border-bg-border bg-bg-surface/80">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-2">
+          <div className="w-24 h-9 rounded-lg bg-bg-elevated" />
+          <div className="w-24 h-9 rounded-lg bg-bg-elevated" />
+          <div className="w-24 h-9 rounded-lg bg-bg-elevated" />
+          <div className="w-20 h-9 rounded-lg bg-bg-elevated" />
         </div>
       </div>
 
