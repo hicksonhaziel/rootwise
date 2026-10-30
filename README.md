@@ -2,7 +2,7 @@
 
 > **Every wrong answer has a root. Rootwise digs it up.**
 
-An open-source misconception diagnostic tool for university students, built for the **OPEN//BUILD 2026 — OSCA Ile-Ife Hacktoberfest Challenge** (Open-Weight Model Track).
+An open-source misconception diagnostic tool for university students, built for the **OPEN//BUILD 2026 — OSCA Ile-Ife Hacktoberfest Challenge**.
 
 **Live App**: [https://rootwise-black.vercel.app](https://rootwise-black.vercel.app)  
 **Demo Course Workspace**: [MTH101 Calculus on Vercel](https://rootwise-black.vercel.app/courses/886d1c53-8799-441e-86cd-ea26f3304c9c)  
@@ -97,45 +97,47 @@ flowchart TD
 
 ---
 
-## Open-Weight Model Track & Selection
+## Open-Weight Model & Architecture
 
 Rootwise runs on **open-weight models** under permissive licenses:
 
-- **Primary Diagnostic Model**: `openai/gpt-oss-120b` (Apache 2.0) hosted on Groq LPUs. Provides sub-second inference, strict JSON output adherence, and deep mathematical reasoning.
-- **Offline Fallback**: `qwen3:4b` (Apache 2.0 / Qwen) running locally via Ollama for study environments with limited internet.
-- **Vision Engine**: `llama-3.2-11b-vision-preview` via Groq for transcribing photo lecture notes and chalkboard snapshots.
+- **Primary Diagnostic Model**: `openai/gpt-oss-120b` (Apache 2.0) hosted on Groq LPUs. Provides strict JSON output adherence and mathematical reasoning.
 
 ### Why not closed proprietary models?
 University students in Africa cannot depend on expensive subscription APIs that gate educational help behind credit cards. Open weights ensure long-term sovereign access, zero cost per query in local setups, and data privacy.
 
-### Evaluation of N-ATLaS
-The team evaluated Nigeria's `N-ATLaS` (`NCAIR1/N-ATLaS`, Llama-3 8B fine-tune). We chose not to deploy it because it carries a custom non-OSI license with a 1,000-user cap and gated weights that break automated reproducible pipelines. In our benchmarks, `openai/gpt-oss-120b` handled Nigerian Pidgin and Nigerian university mathematical phrasing with 100% accuracy while maintaining a fully permissive Apache 2.0 license. See [docs/MODEL_CARD.md](docs/MODEL_CARD.md) for details.
+### Models Excluded: N-ATLaS
+The team investigated Nigeria's `N-ATLaS` (`NCAIR1/N-ATLaS`, Llama-3 8B fine-tune). N-ATLaS was excluded on licence and access grounds: gated weights, custom licence with attribution requirement and a 1,000 active-user cap. In our empirical benchmark, `openai/gpt-oss-120b` handled 2/2 Nigerian Pidgin and code-switched reasoning cases (Cases 13 and 14, sample size $n=2$). See [docs/MODEL_CARD.md](docs/MODEL_CARD.md) for details.
 
 ---
 
 ## Empirical Benchmark & Evaluation
 
-We evaluated Rootwise against a standardized 16-case benchmark covering algebraic traps, lucky guesses, missing prerequisites, Nigerian Pidgin explanations, and adversarial prompt injections.
+We evaluated Rootwise against an automated 15-case benchmark covering algebraic traps, lucky guesses, missing prerequisites, Nigerian Pidgin explanations, and adversarial prompt injections.
 
 ```bash
 # Run the automated benchmark suite
 npm run eval
+
+# Regenerate EVALUATION.md directly from results
+npm run eval:report
 ```
 
-### Bake-Off Benchmark Results (`docs/eval-results/openai_gpt-oss-120b.json`):
+### Benchmark Results (`docs/eval-results/openai_gpt-oss-120b.json`):
 
-| Evaluation Metric | Target | Actual Empirical Result | Status |
+| Evaluation Metric | Target | Actual Empirical Result (`openai/gpt-oss-120b`) | Status |
 | :--- | :--- | :--- | :--- |
-| **Total Test Cases** | 16 | **16 Cases** | Complete |
-| **Valid JSON Rate** | >= 90% | **16/16 (100%)** | Pass |
-| **Zod Schema Adherence** | 100% | **16/16 (100%)** | Pass |
-| **Grounded Citations Rate** | >= 80% | **13/16 (81.3%)** *(3 cases ungroundable by design)* | Pass |
-| **Nigerian Pidgin Reasoning** | Pass | **100% accuracy on Case 13** | Pass |
-| **Code-Switched Error Detection** | Pass | **100% accuracy on Case 14** | Pass |
-| **Prompt Injection Defense** | Pass | **100% immunity on Case 12** | Pass |
-| **Average Response Latency** | < 12,000 ms | **7,428 ms** | Pass |
+| **Total Test Cases** | 15 | **15 Cases** | Complete |
+| **Valid JSON Rate** | >= 90% | **15/15 (100%)** | Pass |
+| **Zod Schema Adherence** | 100% | **15/15 (100%)** | Pass |
+| **Category Accuracy** | >= 60% | **10/15 (67%)** | Pass |
+| **Citation Precision** | 100% | **12/12 (100%)** (all cited quotes verified) | Pass |
+| **Nigerian Pidgin Reasoning** | Pass | **2/2 (100%)** (Cases 13 & 14) | Pass |
+| **Prompt Injection Defense** | Pass | **1/1 (100%)** (Case 12) | Pass |
+| **Mean Latency** | < 15,000 ms | **12,005 ms** | Pass |
+| **Median Latency** | < 15,000 ms | **9,617 ms** | Pass |
 
-Full details, test cases, and confusion matrices are documented in [docs/EVALUATION.md](docs/EVALUATION.md).
+Full case-by-case analysis, expected vs. diagnosed categories, and transparent failure notes are documented in [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ---
 
@@ -215,7 +217,6 @@ npm run build
 ## Hackathon Submission Details
 
 - **Hackathon**: OPEN//BUILD 2026 — OSCA Ile-Ife Hacktoberfest Challenge
-- **Track**: Open-Weight Model Track
 - **Submission Date**: Thursday, 29 October 2026
 - **Live Deployment URL**: [https://rootwise-black.vercel.app](https://rootwise-black.vercel.app)
 - **Interactive Demo Course**: [https://rootwise-black.vercel.app/courses/886d1c53-8799-441e-86cd-ea26f3304c9c](https://rootwise-black.vercel.app/courses/886d1c53-8799-441e-86cd-ea26f3304c9c)

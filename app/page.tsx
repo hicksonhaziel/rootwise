@@ -71,7 +71,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-12 sm:pt-20 pb-16 px-4 sm:px-6 max-w-5xl mx-auto text-center space-y-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-bg-elevated border border-bg-border text-xs font-mono text-text-secondary">
-          <span className="text-lime-600 dark:text-lime-400 font-bold">Hacktoberfest Track</span>
+          <span className="text-lime-600 dark:text-lime-400 font-bold">Hacktoberfest Challenge</span>
           <span>·</span>
           <span>Open-Weight AI Model</span>
         </div>
@@ -385,7 +385,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-xs font-mono uppercase tracking-wider text-lime-700 dark:text-lime-400 font-bold">
-                Open-Weight Model Track
+                Open-Weight Model
               </span>
               <h3 className="text-lg font-bold text-text-primary mt-0.5">
                 openai/gpt-oss-120b on Groq LPUs
@@ -397,25 +397,25 @@ export default function LandingPage() {
           </div>
 
           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
-            Rootwise is free from commercial vendor lock-in. Evaluated on a 16-case benchmark with 100% schema adherence, sub-second Groq inference, and full native support for Nigerian Pidgin and multilingual code-switching.
+            Rootwise is free from commercial vendor lock-in. Evaluated on a 15-case benchmark with 100% schema adherence (15/15), 67% category accuracy (10/15), 100% citation grounding (12/12 quotes verified against course notes), and 2/2 Nigerian Pidgin reasoning cases handled accurately.
           </p>
 
           <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono text-text-secondary">
             <span className="flex items-center gap-1.5 bg-bg-elevated px-3 py-1.5 rounded-lg border border-bg-border">
               <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" weight="fill" />
-              <span>100% Zod Validated</span>
+              <span>100% Schema Adherence (15/15)</span>
             </span>
             <span className="flex items-center gap-1.5 bg-bg-elevated px-3 py-1.5 rounded-lg border border-bg-border">
               <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" weight="fill" />
-              <span>35 Automated Vitest Tests</span>
+              <span>67% Category Accuracy (10/15)</span>
             </span>
             <span className="flex items-center gap-1.5 bg-bg-elevated px-3 py-1.5 rounded-lg border border-bg-border">
               <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" weight="fill" />
-              <span>Offline Edge Fallback (qwen3:4b)</span>
+              <span>100% Grounded Citations (12/12)</span>
             </span>
             <span className="flex items-center gap-1.5 bg-bg-elevated px-3 py-1.5 rounded-lg border border-bg-border">
               <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" weight="fill" />
-              <span>Differential k &ge; 3 Privacy</span>
+              <span>k-Anonymity Threshold (k &ge; 3)</span>
             </span>
           </div>
         </div>

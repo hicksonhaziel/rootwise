@@ -13,7 +13,8 @@
     "ai:ping": "tsx --env-file=.env.local scripts/ai-ping.ts",
     "db:types": "supabase gen types typescript --local > types/supabase.ts",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
-    "eval": "tsx --env-file=.env.local scripts/eval.ts"
+    "eval": "tsx --env-file=.env.local scripts/eval.ts",
+    "eval:report": "tsx scripts/eval-report.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",

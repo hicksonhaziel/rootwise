@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { chat } from "../lib/ai/provider";
-import { SYSTEM_DIRECTIVE, diagnosisPrompt } from "../lib/ai/prompts";
+import { SYSTEM_DIRECTIVE, DIAGNOSIS_JSON_HINT, diagnosisPrompt } from "../lib/ai/prompts";
 import { DiagnosisResponseSchema, type DiagnosisResponse } from "../lib/ai/schemas";
 
 interface EvalCase {
@@ -27,13 +27,25 @@ interface EvalResultItem {
   latency_ms: number;
   valid_json: boolean;
   valid_schema: boolean;
+  category_match: boolean;
   assessment_match: boolean;
   category: string;
-  expected_category?: string;
-  citations_valid: boolean;
-  citation_count: number;
+  expected_category: string;
+  assessment: string;
+  expected_assessment: string;
+  citations_total: number;
+  citations_valid: number;
   belief_simulation_present: boolean;
+  expected_belief_simulation: boolean;
   error?: string;
+}
+
+function normalise(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[""'']/g, '"')
+    .trim();
 }
 
 async function runEval() {
@@ -45,7 +57,7 @@ async function runEval() {
   }
 
   console.log(`\n======================================================`);
-  console.log(`  Rootwise Model Bake-Off & Evaluation Runner`);
+  console.log(`  Rootwise Production-Aligned Model Evaluation`);
   console.log(`  Target Model: ${targetModel}`);
   console.log(`  Timestamp:    ${new Date().toISOString()}`);
   console.log(`======================================================\n`);
@@ -60,10 +72,13 @@ async function runEval() {
   console.log(`Loaded ${files.length} evaluation test cases from ${fixturesDir}\n`);
 
   const results: EvalResultItem[] = [];
-  let totalLatency = 0;
+  const latencies: number[] = [];
   let validJsonCount = 0;
   let validSchemaCount = 0;
-  let validCitationsCount = 0;
+  let categoryMatchCount = 0;
+  let assessmentMatchCount = 0;
+  let totalCitations = 0;
+  let validCitations = 0;
 
   for (const file of files) {
     const rawCase = fs.readFileSync(path.join(fixturesDir, file), "utf8");
@@ -72,11 +87,9 @@ async function runEval() {
     const startTime = Date.now();
     let validJson = false;
     let validSchema = false;
-    let citationsValid = true;
     let parsedDiagnosis: DiagnosisResponse | null = null;
     let errorMsg: string | undefined;
 
-    // Build diagnosis prompt
     const promptText = diagnosisPrompt({
       topicTitle: testCase.topic,
       question: testCase.question,
@@ -92,6 +105,8 @@ async function runEval() {
           { role: "system", content: SYSTEM_DIRECTIVE },
           { role: "user", content: promptText },
         ],
+        jsonHint: DIAGNOSIS_JSON_HINT,
+        model: targetModel,
         temperature: 0.2,
       });
 
@@ -103,18 +118,6 @@ async function runEval() {
         parsedDiagnosis = DiagnosisResponseSchema.parse(json);
         validSchema = true;
         validSchemaCount++;
-
-        // Validate citations against case chunks
-        const validSourceIds = new Set(testCase.chunks.map((c) => c.source_id));
-        for (const cit of parsedDiagnosis.citations) {
-          if (!validSourceIds.has(cit.source_id)) {
-            citationsValid = false;
-            break;
-          }
-        }
-        if (citationsValid && parsedDiagnosis.citations.length > 0) {
-          validCitationsCount++;
-        }
       } catch (parseErr: unknown) {
         errorMsg = parseErr instanceof Error ? parseErr.message : "Schema parse error";
       }
@@ -123,7 +126,50 @@ async function runEval() {
     }
 
     const latency = Date.now() - startTime;
-    totalLatency += latency;
+    latencies.push(latency);
+
+    // Citations validation against case chunks
+    let caseCitationsTotal = 0;
+    let caseCitationsValid = 0;
+
+    if (parsedDiagnosis?.citations && parsedDiagnosis.citations.length > 0) {
+      caseCitationsTotal = parsedDiagnosis.citations.length;
+      totalCitations += caseCitationsTotal;
+
+      for (const cit of parsedDiagnosis.citations) {
+        const normQuote = normalise(cit.quote);
+        const matchingChunks = testCase.chunks.filter((c) => c.source_id === cit.source_id);
+
+        const isGrounded = matchingChunks.some((chunk) => {
+          const normChunkText = normalise(chunk.text);
+          const quoteMatches = normChunkText.includes(normQuote);
+          const pageMatches =
+            chunk.page === null ||
+            cit.page === null ||
+            cit.page === undefined ||
+            chunk.page === cit.page;
+          return quoteMatches && pageMatches;
+        });
+
+        if (isGrounded) {
+          caseCitationsValid++;
+          validCitations++;
+        }
+      }
+    }
+
+    const category = parsedDiagnosis?.possible_gap?.category || "unknown";
+    const expectedCategory = testCase.expected.category || "unknown";
+    const categoryMatch = category === expectedCategory;
+    if (categoryMatch) categoryMatchCount++;
+
+    const assessment = parsedDiagnosis?.assessment || "unknown";
+    const expectedAssessment = testCase.expected.assessment;
+    const assessmentMatch = assessment === expectedAssessment;
+    if (assessmentMatch) assessmentMatchCount++;
+
+    const beliefSimPresent = Boolean(parsedDiagnosis?.belief_simulation);
+    const expectedBeliefSim = Boolean(testCase.expected.should_have_belief_simulation);
 
     const resultItem: EvalResultItem = {
       case_id: testCase.id,
@@ -131,43 +177,58 @@ async function runEval() {
       latency_ms: latency,
       valid_json: validJson,
       valid_schema: validSchema,
-      assessment_match: parsedDiagnosis?.assessment === testCase.expected.assessment,
-      category: parsedDiagnosis?.possible_gap?.category || "unknown",
-      expected_category: testCase.expected.category,
-      citations_valid: citationsValid,
-      citation_count: parsedDiagnosis?.citations?.length || 0,
-      belief_simulation_present: Boolean(parsedDiagnosis?.belief_simulation),
+      category_match: categoryMatch,
+      assessment_match: assessmentMatch,
+      category,
+      expected_category: expectedCategory,
+      assessment,
+      expected_assessment: expectedAssessment,
+      citations_total: caseCitationsTotal,
+      citations_valid: caseCitationsValid,
+      belief_simulation_present: beliefSimPresent,
+      expected_belief_simulation: expectedBeliefSim,
       error: errorMsg,
     };
 
     results.push(resultItem);
 
-    const statusBadge = validSchema ? "✓ PASS" : "✗ FAIL";
+    const passBadge = categoryMatch && validSchema ? "✓ PASS" : "✗ FAIL";
     console.log(
-      `[${testCase.id}] ${statusBadge} | ${latency}ms | Cat: ${resultItem.category} | ${testCase.title}`
+      `[${testCase.id}] ${passBadge} | ${latency}ms | exp: ${expectedCategory} | got: ${category} | ${testCase.title}`
     );
 
-    // Brief inter-request delay to respect API rate limits
-    await new Promise((r) => setTimeout(r, 1200));
+    // Rate-limit delay between calls
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
-
   // Summary Metrics
-  const avgLatency = Math.round(totalLatency / files.length);
-  const jsonRate = Math.round((validJsonCount / files.length) * 100);
-  const schemaRate = Math.round((validSchemaCount / files.length) * 100);
+  const totalCases = files.length;
+  const sortedLatencies = [...latencies].sort((a, b) => a - b);
+  const meanLatency = Math.round(latencies.reduce((a, b) => a + b, 0) / totalCases);
+  const medianLatency =
+    totalCases % 2 === 0
+      ? Math.round((sortedLatencies[totalCases / 2 - 1] + sortedLatencies[totalCases / 2]) / 2)
+      : sortedLatencies[Math.floor(totalCases / 2)];
+
+  const validJsonRate = Math.round((validJsonCount / totalCases) * 100);
+  const validSchemaRate = Math.round((validSchemaCount / totalCases) * 100);
+  const categoryAccuracy = Math.round((categoryMatchCount / totalCases) * 100);
+  const citationValidityRate =
+    totalCitations > 0 ? Math.round((validCitations / totalCitations) * 100) : 100;
 
   console.log(`\n------------------------------------------------------`);
   console.log(`EVALUATION SUMMARY (${targetModel})`);
   console.log(`------------------------------------------------------`);
-  console.log(`Total Cases Evaluated:   ${files.length}`);
-  console.log(`Valid JSON Rate:         ${validJsonCount}/${files.length} (${jsonRate}%)`);
-  console.log(`Zod Schema Valid Rate:   ${validSchemaCount}/${files.length} (${schemaRate}%)`);
-  console.log(`Average Latency:         ${avgLatency} ms`);
-  console.log(`Grounded Citations Rate: ${validCitationsCount}/${files.length}`);
+  console.log(`Total Cases:              ${totalCases}`);
+  console.log(`Valid JSON Rate:          ${validJsonCount}/${totalCases} (${validJsonRate}%)`);
+  console.log(`Zod Schema Rate:          ${validSchemaCount}/${totalCases} (${validSchemaRate}%)`);
+  console.log(`Category Accuracy:        ${categoryMatchCount}/${totalCases} (${categoryAccuracy}%)`);
+  console.log(`Assessment Match Rate:    ${assessmentMatchCount}/${totalCases} (${Math.round((assessmentMatchCount / totalCases) * 100)}%)`);
+  console.log(`Citation Validity:        ${validCitations}/${totalCitations} (${citationValidityRate}%)`);
+  console.log(`Mean Latency:             ${meanLatency} ms`);
+  console.log(`Median Latency:           ${medianLatency} ms`);
   console.log(`------------------------------------------------------\n`);
 
-  // Write results to docs/eval-results/<sanitizedModel>.json
   const docsDir = path.join(process.cwd(), "docs/eval-results");
   if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
 
@@ -177,12 +238,18 @@ async function runEval() {
   const report = {
     model: targetModel,
     evaluated_at: new Date().toISOString(),
-    total_cases: files.length,
+    total_cases: totalCases,
     metrics: {
-      valid_json_rate_pct: jsonRate,
-      schema_adherence_rate_pct: schemaRate,
-      avg_latency_ms: avgLatency,
-      grounded_citations_cases: validCitationsCount,
+      valid_json_rate_pct: validJsonRate,
+      schema_adherence_rate_pct: validSchemaRate,
+      category_accuracy_pct: categoryAccuracy,
+      category_matches: categoryMatchCount,
+      assessment_matches: assessmentMatchCount,
+      citations_total: totalCitations,
+      citations_valid: validCitations,
+      citation_validity_pct: citationValidityRate,
+      mean_latency_ms: meanLatency,
+      median_latency_ms: medianLatency,
     },
     results,
   };
