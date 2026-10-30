@@ -95,6 +95,7 @@ export function DiagnosticSession({
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "C" | "D" | null>(null);
   const [confidence, setConfidence] = useState<ConfidenceLevel | null>(null);
   const [submittingCheck, setSubmittingCheck] = useState(false);
+  const [submitStage, setSubmitStage] = useState<"reading" | "citations">("reading");
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -173,7 +174,12 @@ export function DiagnosticSession({
     if (!studyGuide || !selectedOption || !confidence || !selectedTopicId) return;
 
     setSubmittingCheck(true);
+    setSubmitStage("reading");
     setSubmitError(null);
+
+    const stageTimer = setTimeout(() => {
+      setSubmitStage("citations");
+    }, 2500);
 
     const check = studyGuide.diagnostic_check;
     const selectedObj = check.options.find((o) => o.key === selectedOption);
@@ -212,6 +218,7 @@ export function DiagnosticSession({
       const msg = err instanceof Error ? err.message : "Error verifying answer";
       setSubmitError(msg);
     } finally {
+      clearTimeout(stageTimer);
       setSubmittingCheck(false);
     }
   }
@@ -597,7 +604,11 @@ export function DiagnosticSession({
                       {submittingCheck ? (
                         <>
                           <SpinnerGap size={15} className="animate-spin" />
-                          <span>Checking reasoning…</span>
+                          <span>
+                            {submitStage === "reading"
+                              ? "Reading your notes…"
+                              : "Checking citations against notes…"}
+                          </span>
                         </>
                       ) : (
                         <>

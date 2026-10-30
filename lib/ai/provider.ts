@@ -12,6 +12,7 @@
  */
 
 import OpenAI from "openai";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -54,6 +55,7 @@ interface ChatOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  reasoningEffort?: "low" | "medium";
 }
 
 export async function chat(options: ChatOptions): Promise<string> {
@@ -63,6 +65,7 @@ export async function chat(options: ChatOptions): Promise<string> {
     model = AI_MODEL,
     temperature = 0.3,
     maxTokens = 2048,
+    reasoningEffort,
   } = options;
 
   // Inject JSON instruction when schema hint is provided
@@ -80,13 +83,19 @@ export async function chat(options: ChatOptions): Promise<string> {
   let attempt = 0;
   while (attempt <= AI_MAX_RETRIES) {
     try {
-      const response = await aiClient.chat.completions.create({
+      const requestParams: ChatCompletionCreateParamsNonStreaming & { reasoning_effort?: string } = {
         model,
         messages: allMessages,
         temperature,
         max_tokens: maxTokens,
         response_format: jsonHint ? { type: "json_object" } : undefined,
-      });
+      };
+
+      if (model.startsWith("openai/gpt-oss") && reasoningEffort) {
+        requestParams.reasoning_effort = reasoningEffort;
+      }
+
+      const response = await aiClient.chat.completions.create(requestParams as unknown as ChatCompletionCreateParamsNonStreaming);
 
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error("Empty model response");

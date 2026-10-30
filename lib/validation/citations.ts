@@ -65,25 +65,48 @@ export async function validateCitations(
       .map((s) => [s.id, s.filename])
   );
 
-  // For each citation, verify the quote exists in at least one chunk of that source
+  // Batch fetch all chunks for valid sources in ONE single DB query
+  const validSourceIds = [...validSourceMap.keys()];
+  if (!validSourceIds.length) return [];
+
+  const { data: chunks, error: chunksError } = await supabase
+    .from("source_chunks")
+    .select("source_id, page_number, text")
+    .in("source_id", validSourceIds)
+    .limit(500);
+
+  if (chunksError) {
+    console.error("[citation-validator] DB error fetching chunks:", chunksError);
+    return [];
+  }
+
+  // Index chunks by source_id in memory
+  const chunkMap = new Map<string, Array<{ page_number: number | null; text: string }>>();
+  for (const c of chunks ?? []) {
+    const list = chunkMap.get(c.source_id) ?? [];
+    list.push({ page_number: c.page_number, text: c.text });
+    chunkMap.set(c.source_id, list);
+  }
+
+  // Verify quotes and page numbers in memory
   const validated: ValidatedCitation[] = [];
 
   for (const citation of citations) {
     const filename = validSourceMap.get(citation.source_id);
     if (!filename) continue; // source_id doesn't exist / wrong course
 
-    // Check if the quoted text appears in any chunk for this source
+    const sourceChunks = chunkMap.get(citation.source_id) ?? [];
     const normalisedQuote = normalise(citation.quote);
 
-    const { data: chunks } = await supabase
-      .from("source_chunks")
-      .select("text")
-      .eq("source_id", citation.source_id)
-      .limit(200); // safety cap
-
-    const found = (chunks ?? []).some((chunk) =>
-      normalise(chunk.text).includes(normalisedQuote)
-    );
+    const found = sourceChunks.some((chunk) => {
+      const quoteMatches = normalise(chunk.text).includes(normalisedQuote);
+      const pageMatches =
+        citation.page === null ||
+        citation.page === undefined ||
+        chunk.page_number === null ||
+        chunk.page_number === citation.page;
+      return quoteMatches && pageMatches;
+    });
 
     if (found) {
       validated.push({ ...citation, source_filename: filename });

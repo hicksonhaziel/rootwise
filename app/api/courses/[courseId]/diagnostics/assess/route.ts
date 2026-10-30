@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { chat } from "@/lib/ai/provider";
-import { SYSTEM_DIRECTIVE, diagnosisPrompt } from "@/lib/ai/prompts";
+import { SYSTEM_DIRECTIVE, diagnosisPrompt, DIAGNOSIS_JSON_HINT } from "@/lib/ai/prompts";
 import { DiagnosisResponseSchema, type DiagnosisResponse } from "@/lib/ai/schemas";
 import { searchChunks } from "@/lib/retrieval/search";
 import { validateCitations } from "@/lib/validation/citations";
@@ -48,25 +48,27 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Fetch the current topic
-    const { data: topic, error: topicError } = await supabase
-      .from("topics")
-      .select("id, title, description")
-      .eq("id", topicId)
-      .eq("course_id", courseId)
-      .single();
+    // Fetch the current topic and all topics in course concurrently
+    const [topicRes, allTopicsRes] = await Promise.all([
+      supabase
+        .from("topics")
+        .select("id, title, description")
+        .eq("id", topicId)
+        .eq("course_id", courseId)
+        .single(),
+      supabase
+        .from("topics")
+        .select("id, title")
+        .eq("course_id", courseId),
+    ]);
 
-    if (topicError || !topic) {
+    const topic = topicRes.data;
+    if (topicRes.error || !topic) {
       return NextResponse.json({ error: "Topic not found" }, { status: 404 });
     }
 
-    // Fetch all topics in course for prerequisite matching
-    const { data: allTopics } = await supabase
-      .from("topics")
-      .select("id, title")
-      .eq("course_id", courseId);
-
-    const otherTopicIds = (allTopics ?? [])
+    const allTopics = allTopicsRes.data ?? [];
+    const otherTopicIds = allTopics
       .filter((t) => t.id !== topicId)
       .map((t) => t.id);
 
@@ -142,34 +144,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           { role: "system", content: SYSTEM_DIRECTIVE },
           { role: "user", content: promptText },
         ],
-        jsonHint: JSON.stringify({
-          assessment: "partial",
-          what_seems_correct: ["Identified the core relationship correctly."],
-          possible_gap: {
-            category: "conceptual_misconception",
-            description: "May assume the limit depends on the value at the exact point rather than approaching it.",
-          },
-          explanation: "Based on the course notes, limits describe behavior as x approaches c, not necessarily f(c).",
-          next_step: {
-            kind: "hint",
-            text: "Consider what happens when f(c) is undefined but the limit still exists.",
-          },
-          belief_simulation: {
-            implied_belief: "A limit requires the function to be defined at that specific point.",
-            consequence: "You would conclude (x^2 - 1)/(x - 1) has no limit at x = 1.",
-            why_it_breaks: "Algebraic cancellation shows the limit is 2 even though x = 1 is a hole.",
-          },
-          prerequisite_topic_id: otherTopicIds[0] ?? null,
-          follow_up_question: "What is the limit of (x^2 - 4)/(x - 2) as x approaches 2?",
-          citations: chunkParams.length > 0 ? [
-            {
-              source_id: chunkParams[0].source_id,
-              page: chunkParams[0].page ?? 1,
-              quote: chunkParams[0].text.slice(0, 80).trim(),
-            },
-          ] : [],
-          limitations: [],
-        }),
+        jsonHint: DIAGNOSIS_JSON_HINT,
+        reasoningEffort: "low",
+        maxTokens: 1200,
         temperature: 0.2,
       });
 

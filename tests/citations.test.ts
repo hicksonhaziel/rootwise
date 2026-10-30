@@ -3,7 +3,16 @@ import { validateCitations } from "../lib/validation/citations";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RawCitation } from "../lib/ai/schemas";
 
-function createMockSupabase(sourcesData: any[], chunksMap: Record<string, string[]>) {
+interface MockChunk {
+  source_id: string;
+  page_number: number | null;
+  text: string;
+}
+
+function createMockSupabase(
+  sourcesData: any[],
+  chunksData: MockChunk[]
+) {
   return {
     from: vi.fn((table: string) => {
       if (table === "sources") {
@@ -20,10 +29,10 @@ function createMockSupabase(sourcesData: any[], chunksMap: Record<string, string
       if (table === "source_chunks") {
         return {
           select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockImplementation((_col: string, sourceId: string) => {
-              const chunks = (chunksMap[sourceId] ?? []).map((text) => ({ text }));
+            in: vi.fn().mockImplementation((_col: string, ids: string[]) => {
+              const matched = chunksData.filter((c) => ids.includes(c.source_id));
               return {
-                limit: vi.fn().mockResolvedValue({ data: chunks, error: null }),
+                limit: vi.fn().mockResolvedValue({ data: matched, error: null }),
               };
             }),
           }),
@@ -53,12 +62,18 @@ describe("lib/validation/citations — validateCitations", () => {
     },
   ];
 
-  const mockChunks: Record<string, string[]> = {
-    [validSourceId]: [
-      "The limit of sin(x)/x as x approaches 0 equals 1 by the Squeeze Theorem.",
-      "A continuous function has no jumps, breaks, or holes in its domain interval.",
-    ],
-  };
+  const mockChunks: MockChunk[] = [
+    {
+      source_id: validSourceId,
+      page_number: 3,
+      text: "The limit of sin(x)/x as x approaches 0 equals 1 by the Squeeze Theorem.",
+    },
+    {
+      source_id: validSourceId,
+      page_number: 4,
+      text: "A continuous function has no jumps, breaks, or holes in its domain interval.",
+    },
+  ];
 
   it("returns empty array for empty citations", async () => {
     const supabase = createMockSupabase(mockSources, mockChunks);
@@ -66,7 +81,7 @@ describe("lib/validation/citations — validateCitations", () => {
     expect(result).toEqual([]);
   });
 
-  it("passes citations with real matching quote and attaches source_filename", async () => {
+  it("real quote passes and attaches source_filename", async () => {
     const supabase = createMockSupabase(mockSources, mockChunks);
     const citations: RawCitation[] = [
       {
@@ -83,13 +98,27 @@ describe("lib/validation/citations — validateCitations", () => {
     expect(result[0].page).toBe(3);
   });
 
-  it("drops citations with hallucinated or invented quotes", async () => {
+  it("invented quote fails and is dropped", async () => {
     const supabase = createMockSupabase(mockSources, mockChunks);
     const citations: RawCitation[] = [
       {
         source_id: validSourceId,
         page: 3,
         quote: "The derivative of sin(x) is guaranteed to always be negative.",
+      },
+    ];
+
+    const result = await validateCitations(supabase, courseId, citations);
+    expect(result).toHaveLength(0);
+  });
+
+  it("wrong page fails even if quote exists in document", async () => {
+    const supabase = createMockSupabase(mockSources, mockChunks);
+    const citations: RawCitation[] = [
+      {
+        source_id: validSourceId,
+        page: 99, // Chunk is on page 3, so page 99 must fail
+        quote: "limit of sin(x)/x as x approaches 0 equals 1",
       },
     ];
 
