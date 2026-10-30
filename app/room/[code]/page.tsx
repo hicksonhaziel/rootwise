@@ -38,7 +38,8 @@ export default function RoomParticipantPage({
   // Form state
   const [answer, setAnswer] = useState("");
   const [confidence, setConfidence] = useState<Confidence | null>(null);
-  const [optedIn, setOptedIn] = useState(true);
+  const [optedIn, setOptedIn] = useState(false);
+  const [consentDecided, setConsentDecided] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -235,6 +236,7 @@ export default function RoomParticipantPage({
                   onChange={(e) => setAnswer(e.target.value)}
                   placeholder="Explain your thinking step-by-step..."
                   rows={4}
+                  maxLength={500}
                   className="input w-full resize-none text-xs leading-relaxed"
                   disabled={submitting}
                   required
@@ -277,17 +279,34 @@ export default function RoomParticipantPage({
               </div>
 
               {/* Opt-in Privacy Line (BUILD.md §3.2) */}
-              <label className="flex items-start gap-2.5 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={optedIn}
-                  onChange={(e) => setOptedIn(e.target.checked)}
-                  className="mt-0.5 rounded border-bg-border accent-lime-400"
-                />
-                <span className="text-[11px] text-text-tertiary leading-tight">
-                  Include my response in anonymous cohort study aggregation (strictly zero names, emails, or personal identifiers).
-                </span>
-              </label>
+              <div className="space-y-1.5 pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={optedIn}
+                    onChange={(e) => {
+                      setOptedIn(e.target.checked);
+                      setConsentDecided(true);
+                    }}
+                    className="mt-0.5 rounded border-bg-border accent-lime-400"
+                  />
+                  <span className="text-[11px] text-text-tertiary leading-tight">
+                    Include my response in anonymous cohort study aggregation (strictly zero names, emails, or personal identifiers).
+                  </span>
+                </label>
+                {!consentDecided && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOptedIn(false);
+                      setConsentDecided(true);
+                    }}
+                    className="text-[10px] text-text-tertiary hover:text-text-secondary underline block pl-6"
+                  >
+                    Keep my response strictly private (do not include in cohort aggregate)
+                  </button>
+                )}
+              </div>
 
               {submitError && (
                 <p className="text-xs text-status-wrong">{submitError}</p>
@@ -296,10 +315,10 @@ export default function RoomParticipantPage({
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={!confidence || !answer.trim() || submitting}
+                disabled={!confidence || !answer.trim() || !consentDecided || submitting}
                 className={cn(
                   "btn-primary w-full py-3 flex items-center justify-center gap-2 text-xs font-semibold shadow-lg transition-all",
-                  (!confidence || !answer.trim()) && "opacity-50 cursor-not-allowed"
+                  (!confidence || !answer.trim() || !consentDecided) && "opacity-50 cursor-not-allowed"
                 )}
               >
                 {submitting ? (

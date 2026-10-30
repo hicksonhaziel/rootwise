@@ -114,6 +114,7 @@ export default function RoomHostPage({
           event: "*",
           schema: "public",
           table: "room_answers",
+          ...(room?.id ? { filter: `room_id=eq.${room.id}` } : {}),
         },
         () => {
           fetchRoomAnswers();
@@ -121,16 +122,16 @@ export default function RoomHostPage({
       )
       .subscribe();
 
-    // Polling fallback every 3.5 seconds
+    // Polling fallback every 10 seconds
     const interval = setInterval(() => {
       fetchRoomAnswers();
-    }, 3500);
+    }, 10000);
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [code, fetchRoomAnswers]);
+  }, [code, fetchRoomAnswers, room?.id]);
 
   function copyJoinLink() {
     if (typeof window !== "undefined") {

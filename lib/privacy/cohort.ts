@@ -26,6 +26,7 @@ export interface CohortSummary {
   threshold_used: number;
   misconceptions: MisconceptionAggregate[];
   confident_wrong_total: number;
+  unclassified_count: number;
 }
 
 /**
@@ -51,14 +52,19 @@ export function computeCohortSummary(
       threshold_used: threshold,
       misconceptions: [],
       confident_wrong_total: 0,
+      unclassified_count: 0,
     };
   }
 
   // Aggregate misconception categories
   const catMap = new Map<string, { count: number; confident_wrong: number }>();
+  let unclassified = 0;
 
   for (const a of opted) {
-    if (!a.misconception_cat) continue;
+    if (!a.misconception_cat) {
+      unclassified++;
+      continue;
+    }
 
     const existing = catMap.get(a.misconception_cat) ?? { count: 0, confident_wrong: 0 };
     existing.count++;
@@ -84,5 +90,6 @@ export function computeCohortSummary(
     threshold_used: threshold,
     misconceptions,
     confident_wrong_total,
+    unclassified_count: unclassified,
   };
 }

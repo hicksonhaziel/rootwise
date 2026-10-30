@@ -119,4 +119,32 @@ describe("lib/privacy/cohort — computeCohortSummary", () => {
     expect(resultFive.meets_threshold).toBe(true);
     expect(resultFive.total_responses).toBe(5);
   });
+
+  it("excludes null misconception categories from category counts and reports unclassified_count", () => {
+    const answers = [
+      {
+        opted_in: true,
+        confidence: "sure",
+        misconception_cat: "conceptual_misconception",
+      },
+      {
+        opted_in: true,
+        confidence: "think_so",
+        misconception_cat: null, // unclassified or failed LLM classification
+      },
+      {
+        opted_in: true,
+        confidence: "guessing",
+        misconception_cat: null, // unclassified
+      },
+    ];
+
+    const result = computeCohortSummary(answers, PRIVACY_THRESHOLD_DEMO);
+    expect(result.meets_threshold).toBe(true);
+    expect(result.total_responses).toBe(3);
+    expect(result.misconceptions).toHaveLength(1);
+    expect(result.misconceptions[0].category).toBe("conceptual_misconception");
+    expect(result.misconceptions[0].count).toBe(1);
+    expect(result.unclassified_count).toBe(2);
+  });
 });
