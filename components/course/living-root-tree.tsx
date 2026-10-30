@@ -2,9 +2,21 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { ArrowRight, Cube, TreeStructure } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { ThreeRootTree } from "./three-root-tree";
+
+const ThreeRootTree = dynamic(
+  () => import("./three-root-tree").then((m) => m.ThreeRootTree),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[420px] flex items-center justify-center text-xs text-text-tertiary">
+        Loading 3D visualization…
+      </div>
+    ),
+  }
+);
 
 interface Topic {
   id: string;
@@ -24,7 +36,7 @@ export function LivingRootTree({ topics, onSelectTopic }: Props) {
   const [selectedNode, setSelectedNode] = useState<Topic | null>(
     topics.length > 0 ? topics[0] : null
   );
-  const [renderMode, setRenderMode] = useState<"2d" | "3d">("3d");
+  const [renderMode, setRenderMode] = useState<"2d" | "3d">("2d");
 
   if (topics.length === 0) {
     return (

@@ -284,7 +284,7 @@ export function DiagnosticSession({
                 value={selectedTopicId || ""}
                 onChange={(e) => setSelectedTopicId(e.target.value)}
                 disabled={loadingGuide || submittingCheck}
-                className="bg-bg-elevated border border-bg-border rounded-lg px-3 py-1.5 text-xs font-semibold text-zinc-100 outline-none focus:border-lime-400 cursor-pointer disabled:opacity-50"
+                className="bg-bg-elevated border border-bg-border rounded-lg px-3 py-1.5 text-xs font-semibold text-zinc-100 outline-none focus:border-lime-400 cursor-pointer disabled:opacity-50 max-w-[220px] sm:max-w-xs truncate"
               >
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>

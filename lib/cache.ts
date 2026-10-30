@@ -1,6 +1,6 @@
 /**
- * lib/cache.ts — Ultra-fast in-memory cache with stale-while-revalidate
- * Supports both client-side instant data access and server-side request deduplication.
+ * lib/cache.ts — In-memory client cache with TTL
+ * Supports fast tab switching and client-side instant data access.
  */
 
 interface CacheEntry<T> {

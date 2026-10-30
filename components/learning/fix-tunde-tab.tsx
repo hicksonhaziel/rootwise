@@ -148,7 +148,7 @@ export function FixTundeTab({ courseId }: Props) {
         </div>
 
         {/* Topic Selector & Generate */}
-        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+        <div className="flex items-center gap-2 self-start sm:self-center shrink-0 flex-wrap">
           {topics.length > 0 && (
             <select
               value={selectedTopicId}
@@ -156,7 +156,7 @@ export function FixTundeTab({ courseId }: Props) {
                 setSelectedTopicId(e.target.value);
                 handleFetchChallenge(e.target.value);
               }}
-              className="input text-xs py-1.5 px-2 bg-bg-base"
+              className="input text-xs py-1.5 px-2 bg-bg-base max-w-[200px] truncate"
               disabled={loading}
             >
               {topics.map((t) => (

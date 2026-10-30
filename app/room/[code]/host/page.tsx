@@ -176,7 +176,7 @@ export default function RoomHostPage({
     <div className="min-h-screen bg-bg-base text-text-primary flex flex-col">
       {/* Top Navigation */}
       <header className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
@@ -219,7 +219,7 @@ export default function RoomHostPage({
       </header>
 
       {/* Main Host Screen Grid */}
-      <main className="max-w-6xl w-full mx-auto p-6 flex-1 space-y-6">
+      <main className="max-w-6xl w-full mx-auto p-4 sm:p-6 flex-1 space-y-6">
         {/* Banner with Room Code & Question */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 card p-6 border-bg-border bg-bg-surface space-y-3">

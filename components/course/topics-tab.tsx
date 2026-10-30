@@ -237,7 +237,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
   return (
     <div className="space-y-6">
       {/* Official Disclaimer Banner (Blueprint & BUILD.md requirement) */}
-      <div className="p-3 bg-bg-surface border border-bg-border rounded-lg flex items-center justify-between gap-4">
+      <div className="p-3 bg-bg-surface border border-bg-border rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <Info size={16} className="text-lime-700 dark:text-lime-300 shrink-0" weight="fill" />
           <span>
@@ -246,7 +246,7 @@ export function TopicsTab({ courseId, onSelectTopicForDiagnostic }: Props) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {/* View Mode Toggle */}
           <div className="flex bg-bg-elevated border border-bg-border rounded p-0.5">
             <button

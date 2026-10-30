@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { RootwiseLogo } from "@/components/ui/rootwise-logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -57,36 +57,47 @@ export function CourseWorkspace({
   initialTopicId?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set([initialTab]));
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(initialTopicId);
+
+  const handleSelectTab = (tab: Tab) => {
+    setActiveTab(tab);
+    setVisitedTabs((prev) => {
+      if (prev.has(tab)) return prev;
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-bg-base">
       {/* Top nav */}
       <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <Link
               href="/dashboard"
               prefetch={true}
-              className="p-1.5 text-text-tertiary hover:text-text-primary rounded-md transition-colors inline-flex items-center justify-center"
+              className="p-1.5 text-text-tertiary hover:text-text-primary rounded-md transition-colors inline-flex items-center justify-center shrink-0"
               title="Back to dashboard"
             >
               <ArrowLeft size={16} weight="bold" />
             </Link>
             <RootwiseLogo variant="mark" size={22} />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               {course.course_code && (
-                <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-mono font-medium text-lime-700 dark:text-lime-300 bg-lime-500/10 dark:bg-lime-300/10 border border-lime-500/20 dark:border-lime-300/20 px-2 py-0.5 rounded shrink-0">
                   {course.course_code}
                 </span>
               )}
-              <span className="text-sm font-medium text-text-primary truncate max-w-[300px]">
+              <span className="text-sm font-medium text-text-primary truncate max-w-[160px] sm:max-w-[300px]">
                 {course.title}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <ThemeToggle />
           </div>
         </div>
@@ -94,7 +105,7 @@ export function CourseWorkspace({
 
       {/* Tab bar */}
       <div className="border-b border-bg-border bg-bg-surface/80 backdrop-blur-md sticky top-16 z-30">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center">
           <div className="flex items-center gap-1.5 overflow-x-auto py-1 w-full no-scrollbar">
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -102,9 +113,9 @@ export function CourseWorkspace({
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleSelectTab(tab.id)}
                   className={`
-                    relative flex items-center gap-2 px-3.5 h-9 text-xs font-medium transition-all whitespace-nowrap rounded-lg
+                    relative flex items-center gap-2 px-3.5 h-9 text-xs font-medium transition-all whitespace-nowrap rounded-lg shrink-0
                     ${
                       isActive
                         ? "text-lime-700 dark:text-lime-300 font-semibold shadow-sm"
@@ -128,61 +139,65 @@ export function CourseWorkspace({
         </div>
       </div>
 
-      {/* Tab content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.1, ease: "easeOut" }}
-          >
-            {activeTab === "overview" && (
-              <OverviewTab
-                course={course}
-                onNavigate={(tab) => setActiveTab(tab)}
-              />
-            )}
-            {activeTab === "materials" && (
-              <MaterialsTab
-                courseId={course.id}
-                onNavigateToTopics={() => setActiveTab("topics")}
-              />
-            )}
-            {activeTab === "topics" && (
-              <TopicsTab
-                courseId={course.id}
-                onSelectTopicForDiagnostic={(topicId) => {
-                  setSelectedTopicId(topicId);
-                  setActiveTab("learn");
-                }}
-              />
-            )}
-            {activeTab === "learn" && (
-              <DiagnosticSession
-                courseId={course.id}
-                initialTopicId={selectedTopicId}
-                onNavigateToTopics={() => setActiveTab("topics")}
-              />
-            )}
-            {activeTab === "exam" && (
-              <ExamTab
-                courseId={course.id}
-                onNavigateToTopicDiagnostic={(topicId) => {
-                  setSelectedTopicId(topicId);
-                  setActiveTab("learn");
-                }}
-              />
-            )}
-            {activeTab === "tunde" && (
-              <FixTundeTab courseId={course.id} />
-            )}
-            {activeTab === "room" && (
-              <RoomTab courseId={course.id} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+      {/* Tab content - keep visited tabs mounted to preserve state and avoid refetching */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {visitedTabs.has("overview") && (
+          <div className={activeTab === "overview" ? "block" : "hidden"}>
+            <OverviewTab
+              course={course}
+              onNavigate={(tab) => handleSelectTab(tab)}
+            />
+          </div>
+        )}
+        {visitedTabs.has("materials") && (
+          <div className={activeTab === "materials" ? "block" : "hidden"}>
+            <MaterialsTab
+              courseId={course.id}
+              onNavigateToTopics={() => handleSelectTab("topics")}
+            />
+          </div>
+        )}
+        {visitedTabs.has("topics") && (
+          <div className={activeTab === "topics" ? "block" : "hidden"}>
+            <TopicsTab
+              courseId={course.id}
+              onSelectTopicForDiagnostic={(topicId) => {
+                setSelectedTopicId(topicId);
+                handleSelectTab("learn");
+              }}
+            />
+          </div>
+        )}
+        {visitedTabs.has("learn") && (
+          <div className={activeTab === "learn" ? "block" : "hidden"}>
+            <DiagnosticSession
+              courseId={course.id}
+              initialTopicId={selectedTopicId}
+              onNavigateToTopics={() => handleSelectTab("topics")}
+            />
+          </div>
+        )}
+        {visitedTabs.has("exam") && (
+          <div className={activeTab === "exam" ? "block" : "hidden"}>
+            <ExamTab
+              courseId={course.id}
+              onNavigateToTopicDiagnostic={(topicId) => {
+                setSelectedTopicId(topicId);
+                handleSelectTab("learn");
+              }}
+            />
+          </div>
+        )}
+        {visitedTabs.has("tunde") && (
+          <div className={activeTab === "tunde" ? "block" : "hidden"}>
+            <FixTundeTab courseId={course.id} />
+          </div>
+        )}
+        {visitedTabs.has("room") && (
+          <div className={activeTab === "room" ? "block" : "hidden"}>
+            <RoomTab courseId={course.id} />
+          </div>
+        )}
       </main>
     </div>
   );

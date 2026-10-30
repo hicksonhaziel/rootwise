@@ -81,7 +81,7 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
     <div className="min-h-screen bg-bg-base">
       {/* Top nav */}
       <nav className="border-b border-bg-border bg-bg-base/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <RootwiseLogo variant="wordmark" size={28} />
 
           <div className="flex items-center gap-3">
@@ -106,7 +106,7 @@ export function DashboardClient({ user, courses: initialCourses, weakTopics }: P
       </nav>
 
       {/* Main content */}
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <motion.div
           variants={containerVariants}
           initial="hidden"
