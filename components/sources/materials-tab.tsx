@@ -318,7 +318,7 @@ export function MaterialsTab({ courseId, onNavigateToTopics }: Props) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

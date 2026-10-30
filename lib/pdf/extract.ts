@@ -174,9 +174,11 @@ export async function extractImageText(buffer: Buffer, mimeType: string): Promis
   const base64 = buffer.toString("base64");
   const effectiveMime = mimeType || "image/jpeg";
 
+  const visionModel = process.env.AI_VISION_MODEL || "llama-3.2-11b-vision-preview";
+
   try {
     const response = await aiClient.chat.completions.create({
-      model: "llama-3.2-11b-vision-preview",
+      model: visionModel,
       messages: [
         {
           role: "user",

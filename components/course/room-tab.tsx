@@ -115,8 +115,8 @@ export function RoomTab({ courseId }: Props) {
             <span className="text-[10px] font-mono text-lime-700 dark:text-lime-300 uppercase tracking-wider">
               Judges&apos; Live Room Demo
             </span>
-            <span className="text-[10px] font-mono text-text-tertiary bg-bg-base border border-bg-border px-1.5 py-0.5 rounded">
-              BUILD.md §3.2
+            <span className="text-[10px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+              Demo data — synthetic
             </span>
           </div>
           <h2 className="text-base font-bold text-text-primary">

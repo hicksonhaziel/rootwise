@@ -43,7 +43,7 @@ async function seed() {
     .from("courses")
     .insert({
       owner_user_id: userId,
-      title: "MTH101: Elementary Mathematics I (Calculus)",
+      title: "MTH101 (Demo data — synthetic)",
       course_code: "MTH101",
     })
     .select()
@@ -168,37 +168,6 @@ async function seed() {
 
     await supabase.from("source_chunks").insert(chunks);
     console.log(`Inserted ${chunks.length} grounded lecture note chunks.`);
-  }
-
-  // 5. Seed Demo Topic Progress
-  if (topics && topics.length >= 3) {
-    console.log("Seeding realistic student knowledge states...");
-    await supabase.from("topic_progress").upsert([
-      {
-        user_id: userId,
-        course_id: courseId,
-        topic_id: topics[0].id,
-        status: "demonstrated",
-        status_reason: "Initial diagnostic and follow-up recheck passed with sound reasoning.",
-        confident_error: false,
-      },
-      {
-        user_id: userId,
-        course_id: courseId,
-        topic_id: topics[1].id,
-        status: "needs_work",
-        status_reason: "High confidence error knot identified on differentiability at sharp corners.",
-        confident_error: true,
-      },
-      {
-        user_id: userId,
-        course_id: courseId,
-        topic_id: topics[2].id,
-        status: "developing",
-        status_reason: "Partially correct reasoning on inner derivative product.",
-        confident_error: false,
-      },
-    ]);
   }
 
   console.log("\n✓ Seeding complete!");

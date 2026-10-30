@@ -38,14 +38,14 @@ Standard AI chatbots fail here too. They generate 8-paragraph textbook essays us
 
 Rootwise is designed to solve this exact problem:
 
-1. **Grounded in Your Lecturer's Handout**: Upload your actual course PDF slides, Word documents (`.docx`), or chalkboard photos. Rootwise answers and diagnoses solely based on what your lecturer taught.
+1. **Grounded in Your Lecturer's Handout**: Upload your actual course PDF slides or Word documents (`.docx`). Rootwise answers and diagnoses solely based on what your lecturer taught.
 2. **The Wrong-Belief Simulator**: Instead of just saying "incorrect, the right formula is...", Rootwise constructs a concrete counterexample showing the domino collapse of the student's assumption:
    - *Implied Rule*: You believed derivatives distribute over multiplication: $(uv)' = u'v'$.
    - *Consequence*: If that were true, $\frac{d}{dx}[x \cdot x] = 1 \cdot 1 = 1$.
    - *Where It Breaks*: But $x \cdot x = x^2$, and $\frac{d}{dx}[x^2] = 2x \ne 1$. The rule fails on the simplest quadratic.
-3. **No Essay Typing (Interactive Mastery Checks)**: Students tap options (A, B, C, D) and rate their confidence (*Sure*, *Think so*, *Guessing*). This flags "confident error knots"—the dangerous mistakes that cost exams.
+3. **Free-Text Diagnostic Reasoning**: The answer box is free text (English, Pidgin, or mixed code-switching) paired with confidence tapping (*Sure*, *Think so*, *Guessing*). This flags "confident error knots"—the dangerous mistakes that cost exams.
 4. **Linguistic Equity (Nigerian Pidgin & Code-Switching)**: Rootwise understands students who express their thought process in Nigerian Pidgin or code-switched phrasing without penalizing their grammar.
-5. **Judges' Anonymous Room (Differential Privacy)**: Lecturers or study group leads project a live room code. Students answer diagnostic questions on their phones. Realtime aggregates display only when at least 3 students answer ($k \ge 3$), so no individual student is ever exposed or embarrassed.
+5. **Judges' Anonymous Room (k-Anonymity Threshold)**: Lecturers or study group leads project a live room code. Students answer diagnostic questions on their phones. Realtime aggregates display only when at least 3 students answer ($k \ge 3$), so no individual student is ever exposed or embarrassed.
 6. **3D Knowledge Tree**: Visualizes prerequisite foundations anchored as underground roots, while syllabus topics sprout as leafy branches above ground.
 
 ---
@@ -61,8 +61,7 @@ flowchart TD
     end
 
     subgraph Ingestion["Document Ingestion Pipeline"]
-        Upload["Course Upload (.pdf, .docx, whiteboard photos)"]
-        OCR["Groq Vision (llama-3.2-11b-vision-preview)"]
+        Upload["Course Upload (.pdf, .docx)"]
         Word["Mammoth .docx Parser"]
         PDF["unpdf Stream Extraction"]
         Chunker["500-Token Overlapping Chunker"]
@@ -76,7 +75,6 @@ flowchart TD
 
     subgraph AI["Open-Weight Inference Layer"]
         Groq["Groq LPUs: openai/gpt-oss-120b (Apache 2.0)"]
-        Ollama["Local Edge Fallback: qwen3:4b (Offline)"]
     end
 
     subgraph Guardrails["Deterministic Verification"]
@@ -85,8 +83,8 @@ flowchart TD
         Rules["lib/progress/rules.ts (Deterministic Progress State Machine)"]
     end
 
-    Upload --> PDF & Word & OCR
-    PDF & Word & OCR --> Chunker
+    Upload --> PDF & Word
+    PDF & Word --> Chunker
     Chunker --> Bucket & DB
     UI --> Realtime
     Realtime --> Room
@@ -141,12 +139,25 @@ Full case-by-case analysis, expected vs. diagnosed categories, and transparent f
 
 ---
 
-## Privacy Architecture: Classroom Differential Anonymity
+## Privacy Architecture: Classroom k-Anonymity Threshold
 
 Rootwise enforces mathematical $k$-anonymity:
 - **$k \ge 3$ Demo Threshold** ($k \ge 5$ production recommendation).
 - **Zero Personal Identifiers**: No student names, usernames, or matric numbers are ever broadcast on the live classroom host screen.
 - **Explicit Consent**: Unconsented responses are excluded from aggregate signals. Details in [docs/PRIVACY.md](docs/PRIVACY.md).
+
+---
+
+## Known Limitations
+
+We document our technical limitations transparently:
+1. **Single Model Benchmark**: Evaluated on a focused 15-case synthetic benchmark with `openai/gpt-oss-120b`.
+2. **Category Accuracy (67%)**: The model achieves 10/15 category accuracy. On ambiguous or out-of-scope inputs (such as Cases 07 and 08), it over-diagnoses conceptual misconceptions rather than flagging insufficient evidence. All diagnoses must be treated as hypotheses (*"You may be thinking..."*).
+3. **Linguistic Sample Size**: 2 test cases evaluated for Nigerian Pidgin and code-switching ($n=2$, both passed). Further testing across broader dialects is planned.
+4. **API Rate Limits & Latency**: System depends on hosted Groq API endpoints; average end-to-end diagnosis latency is ~12 seconds.
+5. **Text-Based Documents**: Ingestion parses text-based PDFs and Word documents. Math symbols in complex layout PDFs can extract with OCR noise.
+6. **Keyword Search Retrieval**: Retrieval uses PostgreSQL Full-Text Search (`tsvector`/FTS) rather than vector embeddings.
+7. **Privacy Model**: Classroom aggregation uses a $k$-anonymity suppression threshold ($k \ge 3$), not formal differential privacy noise injection.
 
 ---
 
@@ -183,7 +194,7 @@ AI_MODEL=openai/gpt-oss-120b
 > **Note for Demo**: Turn off "Confirm email" in Supabase Auth settings for the demo.
 
 ### 3. One-Click Demo Seeder
-Seed the complete **MTH101: Elementary Mathematics I (Calculus)** course with real syllabus topics, lecture notes, and pre-calculated student knowledge states:
+Seed the complete **MTH101 (Demo data — synthetic)** course with syllabus topics and lecture notes:
 ```bash
 npm run seed
 ```
@@ -199,11 +210,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Testing & Quality Suite
 
 ```bash
-# Run all 35 unit & integration tests
+# Run all unit & integration tests
 npm test
 
 # Run the AI benchmark suite
 npm run eval
+
+# Regenerate EVALUATION.md directly from results
+npm run eval:report
 
 # Check ESLint & TypeScript strict types
 npm run lint
@@ -223,12 +237,12 @@ npm run build
 - **Repository URL**: [https://github.com/hicksonhaziel/rootwise](https://github.com/hicksonhaziel/rootwise)
 
 ### Team Members
-- **Hickson Haziel** — Full-Stack Engineering, AI Pipeline & Ingestion Architecture
-- **Mivanyi Agabus Kenneth** — UI & Product Design, Pedagogical Flow & User Experience
+- **Hickson Haziel** — Obafemi Awolowo University (OAU) [TODO: confirm University] — Full-Stack Engineering, AI Pipeline & Ingestion Architecture
+- **Mivanyi Agabus Kenneth** — Obafemi Awolowo University (OAU) [TODO: confirm University] — UI & Product Design, Pedagogical Flow & UX
 
 ### Open-Source Compliance & AI Disclosure
-- **Open-Weight Models**: `openai/gpt-oss-120b` (Apache 2.0), `qwen3:4b` (Apache 2.0 / Qwen), `llama-3.2-11b-vision-preview` (Community).
-- **Assisted Tools**: Google Antigravity used as pair programming assistant for test generation and UI scaffolding. System architecture, prompt engineering, validation logic, and pedagogical state rules designed by the team.
+- **Open-Weight Models**: `openai/gpt-oss-120b` (Apache 2.0 via Groq).
+- **AI Assisted Development Disclosure**: Scaffolding code was generated using Google Antigravity (Gemini) based directly on the team's Project Blueprint and BUILD.md specifications. The team designed all prompt engineering, pedagogical state rules, citation verification logic, and conducted manual and automated testing. Claude was used for an external code and documentation review.
 - **Libraries**: `@phosphor-icons/react`, `three`, `framer-motion`, `unpdf`, `mammoth`, `qrcode`, `zod`, `vitest`.
 
 ---
