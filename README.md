@@ -178,6 +178,8 @@ AI_API_KEY=gsk_your_groq_api_key
 AI_MODEL=openai/gpt-oss-120b
 ```
 
+> **Note for Demo**: Turn off "Confirm email" in Supabase Auth settings for the demo.
+
 ### 3. One-Click Demo Seeder
 Seed the complete **MTH101: Elementary Mathematics I (Calculus)** course with real syllabus topics, lecture notes, and pre-calculated student knowledge states:
 ```bash

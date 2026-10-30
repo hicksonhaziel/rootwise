@@ -27,66 +27,34 @@ export default function LoginPage() {
 
     const cleanEmail = email.trim().toLowerCase();
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (mode === "signup") {
-        // Create pre-confirmed user instantly with zero email hurdles
-        const authRes = await fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, password, action: "signup" }),
+        const { error: signUpErr } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
         });
+        if (signUpErr) throw signUpErr;
 
-        const authData = await authRes.json();
-        if (!authRes.ok) {
-          throw new Error(authData.error || "Failed to create account");
-        }
-
-        // Immediately sign into the session
         const { error: loginErr } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
-
         if (loginErr) throw loginErr;
 
         router.push("/dashboard");
         router.refresh();
       } else {
-        // Sign in mode: try sign in directly
         const { error: loginErr } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
-
-        if (loginErr) {
-          // If error is unconfirmed email, auto-confirm and retry immediately
-          if (
-            loginErr.message.toLowerCase().includes("not confirmed") ||
-            loginErr.message.toLowerCase().includes("email_not_confirmed")
-          ) {
-            setInfoMessage("Auto-confirming your account…");
-            const confRes = await fetch("/api/auth", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email: cleanEmail, password, action: "confirm_existing" }),
-            });
-            const confData = await confRes.json();
-            if (!confRes.ok) {
-              throw new Error(confData.error || loginErr.message);
-            }
-
-            const { error: retryErr } = await supabase.auth.signInWithPassword({
-              email: cleanEmail,
-              password,
-            });
-            if (retryErr) throw retryErr;
-
-            router.push("/dashboard");
-            router.refresh();
-            return;
-          }
-          throw loginErr;
-        }
+        if (loginErr) throw loginErr;
 
         router.push("/dashboard");
         router.refresh();
@@ -270,7 +238,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 placeholder="••••••••"
                 className="w-full bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-lime-600 dark:focus:border-lime-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               />
@@ -279,7 +247,7 @@ export default function LoginPage() {
             {/* Submit button with spring interaction */}
             <motion.button
               type="submit"
-              disabled={loading || !email.trim() || !password}
+              disabled={loading || !email.trim() || password.length < 8}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               className="w-full mt-2 bg-lime-300 text-[#0A0A0A] text-xs font-bold py-2.5 rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
